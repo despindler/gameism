@@ -121,3 +121,38 @@ Next steps:
 - Add time pressure, due-date consequences, and recurring review cycles.
 - Add an auditor mode that uses sampled evidence and interviews.
 - Add admin-tunable incident frequency, scoring weights, and audit strictness.
+
+## UI Phase 1 - Top-Level Navigation And Playwright Visual Smoke
+
+Date: 2026-06-09
+
+Goal: Reduce always-visible screen clutter by moving secondary workflows behind top-level tabs and add repeatable browser-level visual checks.
+
+What changed:
+
+- Added Playwright dev tooling, config, and a Chromium visual smoke test.
+- Added `tests/seed_visual.php` to reset and seed the local test database for browser checks.
+- Added `GAMEISM_ENV_FILE` support so local tooling can run against `site/.env.test` without using deployment credentials.
+- Added top-level `Office`, `ISMS`, `Teaching`, and `Audits` tabs.
+- Kept the office floor plan as the default focused screen.
+- Moved the ISMS workbench, teaching loop, and certification audit report into dedicated tab panels.
+- Made toast feedback global so updates from any tab are visible.
+- Updated Playwright coverage for authenticated login, nonblank canvas, tab navigation, ISMS sub-tabs, teaching loop actions, and certification audit report rendering.
+
+How to run:
+
+- `npm run test:visual`
+- `php tests/run.php`
+- `node --check site/assets/js/app.js`
+
+Known issues and decisions:
+
+- The tab component is custom CSS/JS with Bootstrap-like behavior, not a Bootstrap dependency.
+- Device configuration still lives in the Office side panel; modal interaction is the next UI phase.
+- Floor-plan architecture and device drawings are still unchanged.
+
+Next steps:
+
+- Move device configuration into inspect/configure modals.
+- Improve floor-plan architecture, furniture, and schematic device drawings.
+- Add state-driven guidance hints.

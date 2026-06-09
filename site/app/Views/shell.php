@@ -76,26 +76,34 @@
                 </div>
             </div>
             <div class="topbar-actions">
-                <button id="run-audit" type="button">Run audit</button>
                 <button id="logout" type="button">Sign out</button>
             </div>
         </header>
 
-        <section class="workspace">
-            <section class="scene-panel" aria-label="Office floor plan">
-                <canvas id="office-canvas" width="1120" height="720"></canvas>
-                <div id="toast" class="toast" hidden></div>
-            </section>
+        <nav id="primary-tabs" class="primary-tabs" role="tablist" aria-label="Main game views">
+            <button id="tab-office" class="active" type="button" role="tab" aria-selected="true" aria-controls="panel-office" data-primary-tab="office">Office</button>
+            <button id="tab-isms" type="button" role="tab" aria-selected="false" aria-controls="panel-isms" data-primary-tab="isms">ISMS</button>
+            <button id="tab-teaching" type="button" role="tab" aria-selected="false" aria-controls="panel-teaching" data-primary-tab="teaching">Teaching</button>
+            <button id="tab-audits" type="button" role="tab" aria-selected="false" aria-controls="panel-audits" data-primary-tab="audits">Audits</button>
+        </nav>
 
-            <aside class="details-panel" aria-label="Asset details">
-                <div id="asset-details" class="asset-details"></div>
-                <section class="findings-panel">
-                    <h2>Open Findings</h2>
-                    <div id="findings-list"></div>
+        <section id="panel-office" class="tab-panel active" role="tabpanel" aria-labelledby="tab-office" data-tab-panel="office">
+            <section class="workspace">
+                <section class="scene-panel" aria-label="Office floor plan">
+                    <canvas id="office-canvas" width="1120" height="720"></canvas>
                 </section>
-            </aside>
+
+                <aside class="details-panel" aria-label="Office context">
+                    <div id="asset-details" class="asset-details"></div>
+                    <section class="findings-panel">
+                        <h2>Open Findings</h2>
+                        <div id="findings-list"></div>
+                    </section>
+                </aside>
+            </section>
         </section>
 
+        <section id="panel-isms" class="tab-panel" role="tabpanel" aria-labelledby="tab-isms" data-tab-panel="isms" hidden>
         <section class="isms-panel" aria-label="ISMS artifacts">
             <header class="panel-heading">
                 <div>
@@ -110,7 +118,9 @@
             </header>
             <div id="isms-body" class="isms-body"></div>
         </section>
+        </section>
 
+        <section id="panel-teaching" class="tab-panel" role="tabpanel" aria-labelledby="tab-teaching" data-tab-panel="teaching" hidden>
         <section class="teaching-panel" aria-label="Teaching loop">
             <header class="panel-heading">
                 <div>
@@ -134,8 +144,24 @@
                 </section>
             </div>
         </section>
+        </section>
 
-        <section id="audit-panel" class="audit-panel" hidden></section>
+        <section id="panel-audits" class="tab-panel" role="tabpanel" aria-labelledby="tab-audits" data-tab-panel="audits" hidden>
+            <section class="audit-panel audit-workspace">
+                <header class="panel-heading">
+                    <div>
+                        <h2>Audits</h2>
+                        <p class="asset-type">Run certification-style checks and review the latest simulated report.</p>
+                    </div>
+                    <button id="run-audit" type="button">Certification audit</button>
+                </header>
+                <div id="audit-panel-body" class="audit-panel-body">
+                    <p class="empty-state">Run a certification audit to generate a simulated auditor report.</p>
+                </div>
+            </section>
+        </section>
+
+        <div id="toast" class="toast" hidden></div>
     </main>
 
     <script src="assets/js/app.js?v=<?= $version ?>" defer></script>

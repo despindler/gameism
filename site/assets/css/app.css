@@ -160,7 +160,7 @@ label {
 .game-shell {
     min-height: 100vh;
     display: grid;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto auto 1fr;
 }
 
 .topbar {
@@ -212,6 +212,43 @@ label {
     border-color: var(--line);
     background: #fff;
     color: var(--ink);
+}
+
+.primary-tabs {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding: 8px 18px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.96);
+}
+
+.primary-tabs button {
+    min-height: 36px;
+    padding: 7px 14px;
+    border-color: transparent;
+    background: transparent;
+    color: var(--muted);
+}
+
+.primary-tabs button:hover {
+    border-color: var(--line);
+    background: var(--panel-2);
+    color: var(--ink);
+}
+
+.primary-tabs button.active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+}
+
+.tab-panel {
+    min-height: 0;
+}
+
+.tab-panel.active {
+    display: block;
 }
 
 .workspace {
@@ -403,7 +440,7 @@ label {
 }
 
 .isms-panel {
-    margin: 0 16px 16px;
+    margin: 16px;
     overflow: hidden;
 }
 
@@ -484,7 +521,7 @@ label {
 }
 
 .teaching-panel {
-    margin: 0 16px 16px;
+    margin: 16px;
     overflow: hidden;
 }
 
@@ -543,7 +580,16 @@ label {
 }
 
 .audit-panel {
-    margin: 0 16px 16px;
+    margin: 16px;
+    padding: 16px;
+}
+
+.audit-workspace {
+    padding: 0;
+    overflow: hidden;
+}
+
+.audit-panel-body {
     padding: 16px;
 }
 
@@ -576,9 +622,10 @@ label {
 }
 
 .toast {
-    position: absolute;
-    left: 18px;
+    position: fixed;
+    right: 18px;
     bottom: 18px;
+    z-index: 30;
     max-width: min(520px, calc(100% - 36px));
     padding: 10px 12px;
     border: 1px solid var(--line);
@@ -609,6 +656,11 @@ label {
 
     .topbar-actions button {
         flex: 1;
+    }
+
+    .primary-tabs {
+        overflow-x: auto;
+        padding: 8px 12px;
     }
 
     .workspace {
@@ -652,6 +704,10 @@ label {
 
     .workspace {
         padding: 10px;
+    }
+
+    .primary-tabs button {
+        flex: 1 0 auto;
     }
 
     .scene-panel {

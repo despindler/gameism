@@ -18,5 +18,10 @@ if (PHP_SAPI === 'cli-server') {
 
 require __DIR__ . '/app/bootstrap.php';
 
-$app = Gameism\Application::create(__DIR__ . '/.env');
+$envFile = getenv('GAMEISM_ENV_FILE');
+if ($envFile === false || $envFile === '') {
+    $envFile = __DIR__ . '/.env';
+}
+
+$app = Gameism\Application::create($envFile);
 $app->handle();

@@ -11,6 +11,7 @@
         busy: false,
         lastReport: null,
         activeIsmsTab: 'assets',
+        activePrimaryTab: 'office',
     };
 
     const els = {
@@ -28,6 +29,8 @@
         runAudit: document.getElementById('run-audit'),
         runInternalAudit: document.getElementById('run-internal-audit'),
         logout: document.getElementById('logout'),
+        primaryTabs: document.getElementById('primary-tabs'),
+        tabPanels: document.querySelectorAll('[data-tab-panel]'),
         canvas: document.getElementById('office-canvas'),
         assetDetails: document.getElementById('asset-details'),
         findingsList: document.getElementById('findings-list'),
@@ -38,7 +41,7 @@
         incidentList: document.getElementById('incident-list'),
         correctiveActionList: document.getElementById('corrective-action-list'),
         internalAuditSummary: document.getElementById('internal-audit-summary'),
-        auditPanel: document.getElementById('audit-panel'),
+        auditPanelBody: document.getElementById('audit-panel-body'),
         toast: document.getElementById('toast'),
     };
 
@@ -81,6 +84,7 @@
     function showGame() {
         els.authView.hidden = true;
         els.gameView.hidden = false;
+        setPrimaryTab(state.activePrimaryTab || 'office');
         resizeCanvas();
     }
 
@@ -122,6 +126,7 @@
         renderFindings();
         renderIsmsPanel();
         renderTeachingPanel();
+        renderAuditsPanel();
     }
 
     function renderHud() {
@@ -133,6 +138,26 @@
         els.scoreDocumentation.textContent = `${categories.documentation.percent}%`;
         els.scoreResilience.textContent = `${categories.resilience.percent}%`;
         els.scoreAudit.textContent = `${categories.audit.percent}%`;
+    }
+
+    function setPrimaryTab(tabKey) {
+        state.activePrimaryTab = tabKey;
+
+        for (const button of els.primaryTabs.querySelectorAll('[data-primary-tab]')) {
+            const active = button.dataset.primaryTab === tabKey;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-selected', active ? 'true' : 'false');
+        }
+
+        for (const panel of els.tabPanels) {
+            const active = panel.dataset.tabPanel === tabKey;
+            panel.classList.toggle('active', active);
+            panel.hidden = !active;
+        }
+
+        if (tabKey === 'office') {
+            window.requestAnimationFrame(resizeCanvas);
+        }
     }
 
     function resizeCanvas() {
@@ -591,6 +616,32 @@
         bindTeachingControls();
     }
 
+    function renderAuditsPanel() {
+        const report = state.lastReport || normalizeLatestCertificationAudit(state.game.latest_audit);
+
+        if (!report) {
+            els.auditPanelBody.innerHTML = '<p class="empty-state">Run a certification audit to generate a simulated auditor report.</p>';
+            return;
+        }
+
+        els.auditPanelBody.innerHTML = renderCertificationReport(report);
+    }
+
+    function normalizeLatestCertificationAudit(report) {
+        if (!report) {
+            return null;
+        }
+
+        return {
+            status: report.status,
+            overall_percent: report.score.overall_percent,
+            major_findings: report.score.major_findings,
+            minor_findings: report.score.minor_findings,
+            summary: 'Latest saved certification-style audit report.',
+            sampled_findings: report.findings || [],
+        };
+    }
+
     function renderIncidentCard(incident) {
         const buttonHtml = incident.status === 'available'
             ? `<button type="button" data-incident-action="start" data-incident-key="${escapeAttr(incident.incident_key)}" ${state.busy ? 'disabled' : ''}>Start drill</button>`
@@ -849,8 +900,13 @@
     }
 
     function renderAudit(report) {
-        els.auditPanel.hidden = false;
-        els.auditPanel.innerHTML = `
+        state.lastReport = report;
+        setPrimaryTab('audits');
+        els.auditPanelBody.innerHTML = renderCertificationReport(report);
+    }
+
+    function renderCertificationReport(report) {
+        return `
             <h2>Simulated Audit Report</h2>
             <p class="control-description">${escapeHtml(report.summary)}</p>
             <div class="audit-grid">
@@ -1002,6 +1058,16 @@
 
     els.runAudit.addEventListener('click', runAudit);
     els.runInternalAudit.addEventListener('click', runInternalAudit);
+
+    els.primaryTabs.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-primary-tab]');
+
+        if (!button) {
+            return;
+        }
+
+        setPrimaryTab(button.dataset.primaryTab);
+    });
 
     els.ismsTabs.addEventListener('click', (event) => {
         const button = event.target.closest('[data-isms-tab]');

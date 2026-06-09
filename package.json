@@ -1,0 +1,30 @@
+{
+  "name": "gameism",
+  "version": "1.0.0",
+  "description": "ISMS Office is a small browser simulation for setting up a physician office with auditable information security controls. The current MVP includes local username/password authentication, a canvas floor plan, clickable workplace assets, control toggles, readiness scoring, an ISMS workbench, incident drills, corrective actions, internal audits, and a simulated certification audit report.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "php tests/run.php && node --check site/assets/js/app.js && npx playwright test",
+    "test:smoke": "php tests/run.php",
+    "test:js": "node --check site/assets/js/app.js",
+    "test:visual": "npx playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/despindler/gameism.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/despindler/gameism/issues"
+  },
+  "homepage": "https://github.com/despindler/gameism#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
+}

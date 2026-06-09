@@ -25,6 +25,7 @@ When updating an existing deployment, run the latest `database/schema.sql` and `
 
 After login, the player configures a small physician office from the floor plan and the ISMS workbench:
 
+- The main application is organized into `Office`, `ISMS`, `Teaching`, and `Audits` tabs.
 - Floor-plan assets expose technical and physical controls.
 - Inventory items track owners, classification, criticality, and verification status.
 - Risk register items track likelihood, impact, owner, and treatment status.
@@ -63,3 +64,13 @@ php tests/run.php
 ```
 
 `tests/run.php` drops and recreates the application tables in the configured test database.
+
+Playwright visual smoke test:
+
+```powershell
+npm install
+npx playwright install chromium
+npm run test:visual
+```
+
+The Playwright test uses `site/.env.test`, resets the configured disposable database through `tests/seed_visual.php`, starts the PHP built-in server with `GAMEISM_ENV_FILE=site/.env.test`, logs in as a seeded user, checks that the canvas is nonblank, and exercises the ISMS and Teaching Loop panels.
