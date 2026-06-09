@@ -87,6 +87,17 @@
             <button id="tab-audits" type="button" role="tab" aria-selected="false" aria-controls="panel-audits" data-primary-tab="audits">Audits</button>
         </nav>
 
+        <section id="guidance-panel" class="guidance-panel" aria-label="Guidance hints">
+            <header>
+                <div>
+                    <p class="eyebrow">Advisor</p>
+                    <h2>Guidance</h2>
+                </div>
+                <p id="guidance-summary" class="asset-type"></p>
+            </header>
+            <div id="guidance-list" class="guidance-list"></div>
+        </section>
+
         <section id="panel-office" class="tab-panel active" role="tabpanel" aria-labelledby="tab-office" data-tab-panel="office">
             <section class="workspace">
                 <section class="scene-panel" aria-label="Office floor plan">

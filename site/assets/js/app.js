@@ -32,6 +32,9 @@
         runInternalAudit: document.getElementById('run-internal-audit'),
         logout: document.getElementById('logout'),
         primaryTabs: document.getElementById('primary-tabs'),
+        guidancePanel: document.getElementById('guidance-panel'),
+        guidanceSummary: document.getElementById('guidance-summary'),
+        guidanceList: document.getElementById('guidance-list'),
         tabPanels: document.querySelectorAll('[data-tab-panel]'),
         canvas: document.getElementById('office-canvas'),
         assetDetails: document.getElementById('asset-details'),
@@ -193,6 +196,7 @@
         }
 
         renderHud();
+        renderGuidance();
         drawOffice();
         renderDetails();
         renderFindings();
@@ -211,6 +215,132 @@
         els.scoreDocumentation.textContent = `${categories.documentation.percent}%`;
         els.scoreResilience.textContent = `${categories.resilience.percent}%`;
         els.scoreAudit.textContent = `${categories.audit.percent}%`;
+    }
+
+    function renderGuidance() {
+        const items = guidanceItems();
+        const overall = state.game.score.overall.percent;
+        const findingCount = state.game.findings.length;
+        els.guidanceSummary.textContent = `${overall}% readiness - ${findingCount} open findings`;
+
+        els.guidanceList.innerHTML = items.map((item, index) => `
+            <article class="guidance-card ${escapeAttr(item.tone)}">
+                <div>
+                    <span class="guidance-step">Priority ${index + 1}</span>
+                    <h3>${escapeHtml(item.title)}</h3>
+                    <p>${escapeHtml(item.body)}</p>
+                </div>
+                <button class="secondary" type="button" data-guidance-action="${escapeAttr(item.action)}" data-guidance-target="${escapeAttr(item.target || '')}" aria-label="${escapeAttr(item.buttonLabel)}">${escapeHtml(item.buttonText)}</button>
+            </article>
+        `).join('');
+    }
+
+    function guidanceItems() {
+        const items = [];
+        const object = selectedObject();
+
+        if (object) {
+            const missingControls = object.controls.filter((control) => !control.enabled);
+            const openFindings = findingsForObject(object.object_key);
+
+            if (openFindings.length > 0 || missingControls.length > 0) {
+                items.push({
+                    tone: openFindings.length > 0 ? 'critical' : 'warning',
+                    title: `Harden ${object.display_name}`,
+                    body: `${missingControls.length} controls still need evidence; ${openFindings.length} findings are linked to this asset.`,
+                    action: 'configure-selected',
+                    target: object.object_key,
+                    buttonText: 'Configure',
+                    buttonLabel: `Configure ${object.display_name}`,
+                });
+            }
+        }
+
+        const missingEvidence = state.game.isms.evidence.filter(isEvidenceIncomplete);
+        if (missingEvidence.length > 0) {
+            items.push({
+                tone: 'critical',
+                title: 'Prepare audit evidence',
+                body: `${missingEvidence.length} evidence records are missing or still draft. Start with ${missingEvidence[0].title}.`,
+                action: 'open-evidence',
+                buttonText: 'Evidence',
+                buttonLabel: 'Open evidence workbench',
+            });
+        }
+
+        const untreatedRisks = state.game.isms.risks.filter(isRiskUntreated);
+        if (untreatedRisks.length > 0) {
+            items.push({
+                tone: 'warning',
+                title: 'Treat open risks',
+                body: `${untreatedRisks.length} risks still need assessment, treatment, or acceptance decisions.`,
+                action: 'open-risks',
+                buttonText: 'Risks',
+                buttonLabel: 'Open risk register',
+            });
+        }
+
+        const openActions = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen);
+        if (openActions.length > 0) {
+            items.push({
+                tone: 'warning',
+                title: 'Close corrective actions',
+                body: `${openActions.length} corrective actions still need completion or effectiveness checks.`,
+                action: 'open-teaching',
+                buttonText: 'Actions',
+                buttonLabel: 'Open corrective actions',
+            });
+        }
+
+        const activeIncident = state.game.teaching.incidents.find((incident) => incident.status === 'active');
+        const availableIncident = state.game.teaching.incidents.find((incident) => incident.status === 'available');
+        if (activeIncident) {
+            items.push({
+                tone: 'warning',
+                title: 'Resolve active drill',
+                body: `${activeIncident.title} is running. Finish evidence and action checks before resolving it.`,
+                action: 'open-teaching',
+                buttonText: 'Teaching',
+                buttonLabel: 'Open active drill',
+            });
+        } else if (availableIncident) {
+            items.push({
+                tone: 'ready',
+                title: 'Run a teaching drill',
+                body: `${availableIncident.title} can turn current gaps into corrective-action practice.`,
+                action: 'open-teaching',
+                buttonText: 'Teaching',
+                buttonLabel: 'Open teaching drills',
+            });
+        }
+
+        if (items.length < 3) {
+            const auditReady = state.game.score.overall.percent >= 85;
+            items.push({
+                tone: auditReady ? 'ready' : 'warning',
+                title: auditReady ? 'Try certification audit' : 'Sample gaps internally',
+                body: auditReady
+                    ? 'Readiness is high enough to attempt a simulated certification-style audit.'
+                    : 'Run an internal audit to sample current gaps and create focused corrective actions.',
+                action: auditReady ? 'open-audits' : 'open-teaching',
+                buttonText: auditReady ? 'Audits' : 'Teaching',
+                buttonLabel: auditReady ? 'Open certification audit' : 'Open internal audit',
+            });
+        }
+
+        return items.slice(0, 3);
+    }
+
+    function isEvidenceIncomplete(item) {
+        return item.status === 'missing' || item.status === 'draft';
+    }
+
+    function isRiskUntreated(item) {
+        return item.treatment_status !== 'treated' && item.treatment_status !== 'accepted';
+    }
+
+    function isCorrectiveActionOpen(action) {
+        return action.status !== 'verified' || action.verification_status !== 'effective';
     }
 
     function setPrimaryTab(tabKey) {
@@ -1521,6 +1651,49 @@
         `;
     }
 
+    function handleGuidanceAction(action, target = '') {
+        if (action === 'configure-selected') {
+            const objectKey = target || state.selectedKey;
+
+            if (objectKey) {
+                setPrimaryTab('office');
+                openDeviceModal(objectKey, 'configure');
+            }
+
+            return;
+        }
+
+        if (action === 'open-evidence') {
+            state.activeIsmsTab = 'evidence';
+            setPrimaryTab('isms');
+            renderIsmsPanel();
+            return;
+        }
+
+        if (action === 'open-risks') {
+            state.activeIsmsTab = 'risks';
+            setPrimaryTab('isms');
+            renderIsmsPanel();
+            return;
+        }
+
+        if (action === 'open-inventory') {
+            state.activeIsmsTab = 'assets';
+            setPrimaryTab('isms');
+            renderIsmsPanel();
+            return;
+        }
+
+        if (action === 'open-teaching') {
+            setPrimaryTab('teaching');
+            return;
+        }
+
+        if (action === 'open-audits') {
+            setPrimaryTab('audits');
+        }
+    }
+
     function selectedObject() {
         if (!state.game || !state.selectedKey) {
             return null;
@@ -1660,6 +1833,16 @@
         }
 
         setPrimaryTab(button.dataset.primaryTab);
+    });
+
+    els.guidancePanel.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-guidance-action]');
+
+        if (!button) {
+            return;
+        }
+
+        handleGuidanceAction(button.dataset.guidanceAction, button.dataset.guidanceTarget);
     });
 
     els.ismsTabs.addEventListener('click', (event) => {

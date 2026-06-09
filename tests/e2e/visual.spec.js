@@ -11,6 +11,14 @@ test('authenticated office simulation renders and teaching loop works', async ({
   await expect(page.locator('#game-view')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Northbridge Family Practice' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Office' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'Guidance' })).toBeVisible();
+  await expect(page.getByText('Harden Reception PC')).toBeVisible();
+  await page.getByRole('button', { name: 'Configure Reception PC' }).click();
+  const guidanceDialog = page.getByRole('dialog');
+  await expect(guidanceDialog).toBeVisible();
+  await expect(guidanceDialog.getByText('Enable controls only when the office could demonstrate')).toBeVisible();
+  await guidanceDialog.getByRole('button', { name: 'Done' }).click();
+  await expect(guidanceDialog).toBeHidden();
   await expect(page.locator('#office-canvas')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'ISMS Workbench' })).toBeHidden();
   await expect(page.getByRole('heading', { name: 'Teaching Loop' })).toBeHidden();
@@ -87,10 +95,10 @@ test('authenticated office simulation renders and teaching loop works', async ({
   await page.getByRole('tab', { name: 'ISMS' }).click();
   await expect(page.getByRole('tab', { name: 'ISMS' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', { name: 'ISMS Workbench' })).toBeVisible();
-  await page.getByRole('button', { name: 'Risks' }).click();
+  await page.getByRole('button', { name: 'Risks', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Unauthorized access to Cloud EHR' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Evidence' }).click();
+  await page.getByRole('button', { name: 'Evidence', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Backup restore test result' })).toBeVisible();
 
   await page.getByRole('tab', { name: 'Teaching' }).click();

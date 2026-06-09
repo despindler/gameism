@@ -222,3 +222,35 @@ Next steps:
 - Add state-driven user guidance hints.
 - Add process steppers for audit and certification-prep workflows.
 - Consider moving floor-plan layout metadata into scenario data once multiple maps are needed.
+
+## UI Phase 4 - Guidance Hints
+
+Date: 2026-06-09
+
+Goal: Give players a clear next step without adding a large tutorial overlay or making the Office view crowded again.
+
+What changed:
+
+- Added a compact global Advisor guidance strip below the main navigation.
+- Added state-driven priority cards based on the selected device, missing controls, open findings, incomplete evidence, untreated risks, corrective actions, incident drills, and audit readiness.
+- Added direct hint actions that open the selected device configuration modal or navigate to Evidence, Risks, Teaching, or Audits.
+- Kept the hint system frontend-only for now; it derives recommendations from the current game state returned by the existing API.
+- Updated Playwright coverage to assert the guidance card and exercise the Configure action.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+
+Known issues and decisions:
+
+- Hints are deterministic and rule-based, not personalized beyond the current simulation state.
+- The advisor recommends up to three priorities to avoid recreating the previous overloaded view.
+- Hint actions navigate or open panels, but they do not automatically mutate state.
+
+Next steps:
+
+- Add process steppers for audit and certification-prep workflows.
+- Add persistent dismissal or "focus this objective" once player progress becomes more nonlinear.
+- Consider moving hint rules to scenario metadata when multiple maps and roles are introduced.

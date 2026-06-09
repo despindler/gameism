@@ -277,6 +277,88 @@ label {
     display: block;
 }
 
+.guidance-panel {
+    display: grid;
+    gap: 10px;
+    margin: 12px 16px 0;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+}
+
+.guidance-panel header {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+    justify-content: space-between;
+}
+
+.guidance-panel h2 {
+    margin: 0;
+    font-size: 1rem;
+    letter-spacing: 0;
+}
+
+.guidance-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.guidance-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    min-height: 92px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    background: var(--panel-2);
+}
+
+.guidance-card.critical {
+    border-left-color: var(--bad);
+}
+
+.guidance-card.warning {
+    border-left-color: var(--warn);
+}
+
+.guidance-card.ready {
+    border-left-color: var(--good);
+}
+
+.guidance-card h3 {
+    margin: 2px 0 4px;
+    font-size: 0.95rem;
+    letter-spacing: 0;
+}
+
+.guidance-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+.guidance-step {
+    color: var(--accent-dark);
+    font-size: 0.72rem;
+    font-weight: 850;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.guidance-card button {
+    align-self: end;
+    min-height: 34px;
+    padding: 6px 10px;
+    white-space: nowrap;
+}
+
 .workspace {
     min-height: 0;
     display: grid;
@@ -826,6 +908,10 @@ label {
         padding: 8px 12px;
     }
 
+    .guidance-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .workspace {
         grid-template-columns: 1fr;
     }
@@ -867,6 +953,29 @@ label {
 
     .workspace {
         padding: 10px;
+    }
+
+    .guidance-panel {
+        margin: 10px 10px 0;
+    }
+
+    .guidance-panel header {
+        display: grid;
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+
+    .guidance-card {
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+
+    .guidance-list {
+        grid-template-columns: 1fr;
+    }
+
+    .guidance-card button {
+        width: 100%;
     }
 
     .primary-tabs button {
