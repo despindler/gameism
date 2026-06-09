@@ -190,3 +190,35 @@ Next steps:
 - Improve floor-plan architecture, furniture, corridors, and schematic device drawings.
 - Add state-driven user guidance hints.
 - Add process steppers for audit and certification-prep workflows.
+
+## UI Phase 3 - Richer Floor Plan And Device Drawings
+
+Date: 2026-06-09
+
+Goal: Make the Office tab read more like an actual physician-office floor plan so players can understand where assets live before opening the configuration modal.
+
+What changed:
+
+- Replaced the simple room grid with a schematic office layout containing rooms, an aisle, door swing marks, and room fills.
+- Added furniture under the scenario assets, including reception desk, exam desks, counters, shelves, table, network shelf, and server rack.
+- Replaced generic asset boxes with type-specific schematic drawings for workstation, laptop, cloud EHR, router, NAS, printer, records cabinet, ISMS binders, and shred console.
+- Kept the existing object coordinates, hit boxes, modal flow, and saved-state contracts unchanged.
+- Extended the Playwright visual smoke test to verify that the richer floor-plan layers render, not just a nonblank canvas.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+
+Known issues and decisions:
+
+- Floor-plan geometry is still defined in the frontend rather than in the scenario catalog or database.
+- Furniture is decorative context for now; it is not yet clickable or represented as asset inventory.
+- Device drawings are schematic canvas glyphs, not external image assets, to keep deployment simple.
+
+Next steps:
+
+- Add state-driven user guidance hints.
+- Add process steppers for audit and certification-prep workflows.
+- Consider moving floor-plan layout metadata into scenario data once multiple maps are needed.

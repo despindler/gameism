@@ -31,6 +31,46 @@ test('authenticated office simulation renders and teaching loop works', async ({
   });
   expect(canvasHasPixels).toBe(true);
 
+  const canvasPlanStats = await page.locator('#office-canvas').evaluate((canvas) => {
+    const context = canvas.getContext('2d');
+    const sample = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    let furniturePixels = 0;
+    let corridorPixels = 0;
+    const unique = new Set();
+
+    for (let index = 0; index < sample.length; index += 4) {
+      const red = sample[index];
+      const green = sample[index + 1];
+      const blue = sample[index + 2];
+      const alpha = sample[index + 3];
+
+      if (alpha === 0) {
+        continue;
+      }
+
+      if (red === 216 && green === 200 && blue === 170) {
+        furniturePixels += 1;
+      }
+
+      if (red === 237 && green === 243 && blue === 244) {
+        corridorPixels += 1;
+      }
+
+      if (index % 80 === 0) {
+        unique.add(`${red},${green},${blue}`);
+      }
+    }
+
+    return {
+      furniturePixels,
+      corridorPixels,
+      uniqueColors: unique.size,
+    };
+  });
+  expect(canvasPlanStats.furniturePixels).toBeGreaterThan(100);
+  expect(canvasPlanStats.corridorPixels).toBeGreaterThan(100);
+  expect(canvasPlanStats.uniqueColors).toBeGreaterThan(20);
+
   const canvas = page.locator('#office-canvas');
   const box = await canvas.boundingBox();
   await page.mouse.click(box.x + box.width * 0.16, box.y + box.height * 0.23);

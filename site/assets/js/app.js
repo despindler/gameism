@@ -54,6 +54,70 @@
     };
 
     const ctx = els.canvas.getContext('2d');
+    const officePlan = {
+        rooms: [
+            { label: 'Reception', x: 0, y: 0, width: 8, height: 7.2, fill: '#fbfcff' },
+            { label: 'Exam 1', x: 8, y: 0, width: 7, height: 7.2, fill: '#f9fbff' },
+            { label: 'Exam 2', x: 15, y: 0, width: 5, height: 7.2, fill: '#f9fbff' },
+            { label: 'Hosted EHR', x: 20, y: 0, width: 8, height: 7.2, fill: '#f4fbfa' },
+            { label: 'Admin', x: 0, y: 10.8, width: 8, height: 7.2, fill: '#fffdf9' },
+            { label: 'Records', x: 8, y: 10.8, width: 6, height: 7.2, fill: '#fffaf6' },
+            { label: 'ISMS office', x: 14, y: 10.8, width: 6, height: 7.2, fill: '#fffdf4' },
+            { label: 'Server room', x: 20, y: 10.8, width: 8, height: 7.2, fill: '#f8fbf8' },
+        ],
+        corridors: [
+            { label: 'Aisle', x: 0, y: 7.2, width: 28, height: 3.6 },
+        ],
+        walls: [
+            [8, 0, 8, 7.2],
+            [15, 0, 15, 7.2],
+            [20, 0, 20, 7.2],
+            [8, 10.8, 8, 18],
+            [14, 10.8, 14, 18],
+            [20, 10.8, 20, 18],
+            [0, 7.2, 2.2, 7.2],
+            [5.1, 7.2, 8, 7.2],
+            [8, 7.2, 9.4, 7.2],
+            [12.2, 7.2, 15, 7.2],
+            [15, 7.2, 16.4, 7.2],
+            [18.9, 7.2, 20, 7.2],
+            [20, 7.2, 22.1, 7.2],
+            [24.7, 7.2, 28, 7.2],
+            [0, 10.8, 2.3, 10.8],
+            [5.2, 10.8, 8, 10.8],
+            [8, 10.8, 9.6, 10.8],
+            [12.2, 10.8, 14, 10.8],
+            [14, 10.8, 15.6, 10.8],
+            [18.2, 10.8, 20, 10.8],
+            [20, 10.8, 22.1, 10.8],
+            [24.7, 10.8, 28, 10.8],
+        ],
+        doors: [
+            { x: 2.2, y: 7.2, width: 2.9, side: 'down' },
+            { x: 9.4, y: 7.2, width: 2.8, side: 'down' },
+            { x: 16.4, y: 7.2, width: 2.5, side: 'down' },
+            { x: 22.1, y: 7.2, width: 2.6, side: 'down' },
+            { x: 2.3, y: 10.8, width: 2.9, side: 'up' },
+            { x: 9.6, y: 10.8, width: 2.6, side: 'up' },
+            { x: 15.6, y: 10.8, width: 2.6, side: 'up' },
+            { x: 22.1, y: 10.8, width: 2.6, side: 'up' },
+            { x: 0, y: 3.8, width: 2.3, side: 'right' },
+        ],
+        furniture: [
+            { label: 'Front desk', type: 'reception_desk', x: 2.1, y: 2.1, width: 4.8, height: 3.7 },
+            { label: 'Exam desk', type: 'desk', x: 9.4, y: 2.4, width: 4.2, height: 2.8 },
+            { label: 'Exam couch', type: 'exam_couch', x: 13.1, y: 0.9, width: 1.2, height: 4.8 },
+            { label: 'Exam desk', type: 'desk', x: 16.4, y: 2.4, width: 2.9, height: 2.8 },
+            { label: 'Exam couch', type: 'exam_couch', x: 18.5, y: 0.9, width: 1, height: 4.8 },
+            { label: 'Cloud zone', type: 'cloud_zone', x: 21.1, y: 1.1, width: 5.8, height: 4.8 },
+            { label: 'Network shelf', type: 'rack', x: 21.2, y: 7.65, width: 5.7, height: 2.8 },
+            { label: 'Print counter', type: 'counter', x: 3.1, y: 10.95, width: 4.2, height: 2.8 },
+            { label: 'Shred area', type: 'counter', x: 3.2, y: 14.4, width: 3.7, height: 2.7 },
+            { label: 'Records shelves', type: 'shelves', x: 8.9, y: 11.45, width: 4.5, height: 5.6 },
+            { label: 'ISMS table', type: 'table', x: 14.8, y: 11.45, width: 4.5, height: 5.6 },
+            { label: 'Server rack', type: 'rack', x: 21.1, y: 11.25, width: 5.8, height: 5.8 },
+        ],
+    };
 
     async function api(path, options = {}) {
         const request = {
@@ -213,45 +277,77 @@
         const w = mapWidth * unit;
         const h = mapHeight * unit;
 
+        ctx.save();
         ctx.fillStyle = '#ffffff';
         ctx.strokeStyle = '#56616b';
         ctx.lineWidth = 3;
         roundRect(x, y, w, h, 7, true, true);
 
+        ctx.beginPath();
+        ctx.rect(x, y, w, h);
+        ctx.clip();
+
+        for (const room of officePlan.rooms) {
+            ctx.fillStyle = room.fill;
+            ctx.fillRect(
+                offsetX + room.x * unit,
+                offsetY + room.y * unit,
+                room.width * unit,
+                room.height * unit,
+            );
+        }
+
+        for (const corridor of officePlan.corridors) {
+            const cx = offsetX + corridor.x * unit;
+            const cy = offsetY + corridor.y * unit;
+            const cw = corridor.width * unit;
+            const ch = corridor.height * unit;
+
+            ctx.fillStyle = '#edf3f4';
+            ctx.fillRect(cx, cy, cw, ch);
+            ctx.fillStyle = '#7a8a94';
+            ctx.font = `800 ${Math.max(10, Math.min(12, unit * 0.38))}px system-ui, sans-serif`;
+            ctx.fillText(corridor.label, cx + 0.45 * unit, cy + ch / 2 + 4);
+        }
+
+        ctx.strokeStyle = 'rgba(116, 130, 140, 0.14)';
+        ctx.lineWidth = 1;
+        for (let gx = 1; gx < mapWidth; gx += 1) {
+            ctx.beginPath();
+            ctx.moveTo(offsetX + gx * unit, y);
+            ctx.lineTo(offsetX + gx * unit, y + h);
+            ctx.stroke();
+        }
+        for (let gy = 1; gy < mapHeight; gy += 1) {
+            ctx.beginPath();
+            ctx.moveTo(x, offsetY + gy * unit);
+            ctx.lineTo(x + w, offsetY + gy * unit);
+            ctx.stroke();
+        }
+
+        drawFurniture(offsetX, offsetY, unit);
+
         ctx.strokeStyle = '#a9b2ba';
         ctx.lineWidth = 2;
 
-        const walls = [
-            [8, 0, 8, 9],
-            [15, 0, 15, 9],
-            [20, 0, 20, 18],
-            [0, 9, 20, 9],
-            [8, 9, 8, 18],
-            [14, 9, 14, 18],
-        ];
-
-        for (const [x1, y1, x2, y2] of walls) {
+        for (const [x1, y1, x2, y2] of officePlan.walls) {
             ctx.beginPath();
             ctx.moveTo(offsetX + x1 * unit, offsetY + y1 * unit);
             ctx.lineTo(offsetX + x2 * unit, offsetY + y2 * unit);
             ctx.stroke();
         }
 
-        const rooms = [
-            ['Reception', 1, 1],
-            ['Exam 1', 9, 1],
-            ['Exam 2', 16, 1],
-            ['Admin', 1, 10],
-            ['Records', 9, 10],
-            ['Server', 21, 10],
-            ['Cloud', 22, 1],
-        ];
+        for (const door of officePlan.doors) {
+            drawDoor(door, offsetX, offsetY, unit);
+        }
 
         ctx.fillStyle = '#6a7680';
-        ctx.font = '700 12px system-ui, sans-serif';
-        for (const [label, rx, ry] of rooms) {
-            ctx.fillText(label, offsetX + rx * unit, offsetY + ry * unit);
+        ctx.font = `700 ${Math.max(10, Math.min(12, unit * 0.38))}px system-ui, sans-serif`;
+        for (const room of officePlan.rooms) {
+            ctx.fillText(room.label, offsetX + (room.x + 0.45) * unit, offsetY + (room.y + 0.8) * unit);
         }
+
+        ctx.restore();
     }
 
     function drawObject(object, offsetX, offsetY, unit) {
@@ -262,30 +358,18 @@
         const selected = object.object_key === state.selectedKey;
         const colors = objectColors(object);
 
-        ctx.shadowColor = selected ? 'rgba(23, 126, 137, 0.28)' : 'rgba(0, 0, 0, 0.12)';
-        ctx.shadowBlur = selected ? 18 : 8;
-        ctx.shadowOffsetY = 3;
-        ctx.fillStyle = colors.fill;
-        ctx.strokeStyle = selected ? '#177e89' : colors.stroke;
-        ctx.lineWidth = selected ? 4 : 2;
-        roundRect(x, y, w, h, 7, true, true);
-        ctx.shadowColor = 'transparent';
+        ctx.save();
+        ctx.shadowColor = selected ? 'rgba(23, 126, 137, 0.24)' : 'rgba(24, 36, 45, 0.1)';
+        ctx.shadowBlur = selected ? 18 : 7;
+        ctx.shadowOffsetY = selected ? 4 : 2;
+        ctx.fillStyle = selected ? 'rgba(23, 126, 137, 0.1)' : 'rgba(255, 255, 255, 0.62)';
+        ctx.strokeStyle = selected ? '#177e89' : 'rgba(86, 97, 107, 0.26)';
+        ctx.lineWidth = selected ? 3 : 1.4;
+        roundRect(x + 1, y + 1, w - 2, h - 2, 8, true, true);
+        ctx.restore();
 
-        const indicator = object.state === 'ready' ? '#2f8f5b' : object.state === 'partial' ? '#c28622' : '#bd3b3b';
-        ctx.fillStyle = indicator;
-        ctx.beginPath();
-        ctx.arc(x + w - 10, y + 10, 5, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = colors.text;
-        const fontSize = Math.max(10, Math.min(14, unit * 0.48));
-        ctx.font = `800 ${fontSize}px system-ui, sans-serif`;
-        drawFittedText(shortLabel(object), x + 8, y + h / 2 + fontSize / 3, w - 16, fontSize);
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.86)';
-        ctx.fillRect(x + 7, y + h - 13, Math.max(0, w - 14), 5);
-        ctx.fillStyle = indicator;
-        ctx.fillRect(x + 7, y + h - 13, Math.max(0, (w - 14) * object.score.percent / 100), 5);
+        drawDeviceShape(object, x, y, w, h, colors, unit);
+        drawObjectStatus(object, x, y, w, h);
 
         state.hitBoxes.push({
             key: object.object_key,
@@ -294,6 +378,328 @@
             w,
             h,
         });
+    }
+
+    function drawFurniture(offsetX, offsetY, unit) {
+        for (const item of officePlan.furniture) {
+            drawFurnitureItem(item, offsetX, offsetY, unit);
+        }
+    }
+
+    function drawFurnitureItem(item, offsetX, offsetY, unit) {
+        const x = offsetX + item.x * unit;
+        const y = offsetY + item.y * unit;
+        const w = item.width * unit;
+        const h = item.height * unit;
+        const palette = {
+            fill: item.type === 'rack' ? '#d7dde0' : item.type === 'cloud_zone' ? '#d8eeee' : '#d8c8aa',
+            stroke: item.type === 'rack' ? '#88949b' : item.type === 'cloud_zone' ? '#91bfc0' : '#a99168',
+            detail: item.type === 'rack' ? '#5d6870' : item.type === 'cloud_zone' ? '#5d9698' : '#8d7651',
+        };
+
+        ctx.save();
+        ctx.fillStyle = palette.fill;
+        ctx.strokeStyle = palette.stroke;
+        ctx.lineWidth = 1.5;
+
+        if (item.type === 'reception_desk') {
+            roundRect(x, y, w, h * 0.66, 5, true, true);
+            roundRect(x, y + h * 0.48, w * 0.38, h * 0.52, 5, true, true);
+        } else {
+            roundRect(x, y, w, h, 5, true, true);
+        }
+
+        ctx.strokeStyle = palette.detail;
+        ctx.lineWidth = 1;
+
+        if (item.type === 'shelves' || item.type === 'rack') {
+            for (let row = 1; row < 4; row += 1) {
+                ctx.beginPath();
+                ctx.moveTo(x + 5, y + (h / 4) * row);
+                ctx.lineTo(x + w - 5, y + (h / 4) * row);
+                ctx.stroke();
+            }
+        }
+
+        if (item.type === 'exam_couch') {
+            ctx.beginPath();
+            ctx.moveTo(x + 6, y + 8);
+            ctx.lineTo(x + w - 6, y + h - 8);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x + w / 2, y + 11, Math.min(w, h) * 0.18, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        if (item.type === 'table' || item.type === 'desk' || item.type === 'counter') {
+            ctx.beginPath();
+            ctx.moveTo(x + 7, y + 7);
+            ctx.lineTo(x + w - 7, y + h - 7);
+            ctx.moveTo(x + w - 7, y + 7);
+            ctx.lineTo(x + 7, y + h - 7);
+            ctx.stroke();
+        }
+
+        const showFurnitureLabel = ['reception_desk', 'cloud_zone', 'rack', 'shelves', 'table'].includes(item.type);
+
+        if (showFurnitureLabel && w >= 70 && h >= 34) {
+            ctx.fillStyle = 'rgba(65, 73, 80, 0.7)';
+            const fontSize = Math.max(9, Math.min(10, unit * 0.32));
+            ctx.font = `700 ${fontSize}px system-ui, sans-serif`;
+            drawFittedText(item.label, x + 6, y + h - 8, w - 12, fontSize);
+        }
+
+        ctx.restore();
+    }
+
+    function drawDoor(door, offsetX, offsetY, unit) {
+        const x = offsetX + door.x * unit;
+        const y = offsetY + door.y * unit;
+        const size = door.width * unit;
+        const swing = size * 0.72;
+
+        ctx.save();
+        ctx.strokeStyle = '#8b9aa5';
+        ctx.lineWidth = 1.4;
+
+        if (door.side === 'down' || door.side === 'up') {
+            const direction = door.side === 'down' ? 1 : -1;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x, y + swing * direction);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x, y, swing, door.side === 'down' ? 0 : -Math.PI / 2, door.side === 'down' ? Math.PI / 2 : 0);
+            ctx.stroke();
+        } else {
+            const direction = door.side === 'right' ? 1 : -1;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + swing * direction, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x, y, swing, door.side === 'right' ? 0 : Math.PI, door.side === 'right' ? Math.PI / 2 : Math.PI * 1.5);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    function drawDeviceShape(object, x, y, w, h, colors, unit) {
+        const pad = Math.max(5, Math.min(10, unit * 0.22));
+        const labelH = Math.max(15, Math.min(19, h * 0.28));
+        const ix = x + pad;
+        const iy = y + pad;
+        const iw = w - pad * 2;
+        const ih = Math.max(16, h - pad * 2 - labelH);
+
+        ctx.save();
+        if (object.object_type === 'workstation') {
+            drawWorkstationDevice(ix, iy, iw, ih, colors);
+        } else if (object.object_type === 'laptop') {
+            drawLaptopDevice(ix, iy, iw, ih, colors);
+        } else if (object.object_type === 'cloud_service') {
+            drawCloudDevice(ix, iy, iw, ih, colors);
+        } else if (object.object_type === 'network') {
+            drawNetworkDevice(ix, iy, iw, ih, colors);
+        } else if (object.object_type === 'backup') {
+            drawNasDevice(ix, iy, iw, ih, colors);
+        } else if (object.object_type === 'printer') {
+            drawPrinterDevice(ix, iy, iw, ih, colors);
+        } else if (object.object_type === 'records') {
+            drawRecordsDevice(ix, iy, iw, ih, colors);
+        } else if (object.object_type === 'documentation') {
+            drawBinderDevice(ix, iy, iw, ih, colors);
+        } else if (object.object_type === 'disposal') {
+            drawShredDevice(ix, iy, iw, ih, colors);
+        } else {
+            roundRect(ix, iy, iw, ih, 7, true, true);
+        }
+
+        const labelY = y + h - labelH - 7;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+        roundRect(x + 5, labelY, w - 10, labelH, 5, true, false);
+        ctx.fillStyle = colors.text;
+        const fontSize = Math.max(9, Math.min(12, unit * 0.36));
+        ctx.font = `800 ${fontSize}px system-ui, sans-serif`;
+        drawFittedText(shortLabel(object), x + 9, labelY + labelH / 2 + fontSize / 3 - 1, w - 18, fontSize);
+        ctx.restore();
+    }
+
+    function drawWorkstationDevice(x, y, w, h, colors) {
+        const screenW = w * 0.7;
+        const screenH = h * 0.52;
+        const sx = x + (w - screenW) / 2;
+        const sy = y + h * 0.08;
+
+        ctx.fillStyle = '#20313f';
+        roundRect(sx, sy, screenW, screenH, 4, true, false);
+        ctx.fillStyle = colors.fill;
+        roundRect(sx + 4, sy + 4, screenW - 8, screenH - 8, 3, true, false);
+        ctx.fillStyle = colors.stroke;
+        ctx.fillRect(x + w * 0.46, sy + screenH, w * 0.08, h * 0.17);
+        roundRect(x + w * 0.34, sy + screenH + h * 0.13, w * 0.32, h * 0.08, 3, true, false);
+        ctx.fillStyle = '#eef2f5';
+        ctx.strokeStyle = '#7c8892';
+        roundRect(x + w * 0.22, y + h * 0.8, w * 0.56, h * 0.12, 3, true, true);
+    }
+
+    function drawLaptopDevice(x, y, w, h, colors) {
+        const screenW = w * 0.72;
+        const screenH = h * 0.48;
+        const sx = x + (w - screenW) / 2;
+        const sy = y + h * 0.12;
+
+        ctx.fillStyle = '#2d214f';
+        roundRect(sx, sy, screenW, screenH, 4, true, false);
+        ctx.fillStyle = colors.fill;
+        roundRect(sx + 4, sy + 4, screenW - 8, screenH - 8, 3, true, false);
+        ctx.fillStyle = colors.stroke;
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.16, y + h * 0.72);
+        ctx.lineTo(x + w * 0.84, y + h * 0.72);
+        ctx.lineTo(x + w * 0.96, y + h * 0.9);
+        ctx.lineTo(x + w * 0.04, y + h * 0.9);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
+        ctx.fillRect(x + w * 0.42, y + h * 0.77, w * 0.16, h * 0.04);
+    }
+
+    function drawCloudDevice(x, y, w, h, colors) {
+        ctx.fillStyle = colors.fill;
+        ctx.strokeStyle = colors.stroke;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.24, y + h * 0.66);
+        ctx.bezierCurveTo(x + w * 0.05, y + h * 0.65, x + w * 0.04, y + h * 0.36, x + w * 0.27, y + h * 0.38);
+        ctx.bezierCurveTo(x + w * 0.33, y + h * 0.16, x + w * 0.58, y + h * 0.12, x + w * 0.68, y + h * 0.34);
+        ctx.bezierCurveTo(x + w * 0.9, y + h * 0.33, x + w * 0.96, y + h * 0.66, x + w * 0.7, y + h * 0.68);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = colors.text;
+        const fontSize = Math.max(10, Math.min(16, h * 0.24));
+        ctx.font = `900 ${fontSize}px system-ui, sans-serif`;
+        drawFittedText('EHR', x + w * 0.35, y + h * 0.56, w * 0.32, fontSize);
+    }
+
+    function drawNetworkDevice(x, y, w, h, colors) {
+        ctx.strokeStyle = colors.stroke;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.25, y + h * 0.42);
+        ctx.lineTo(x + w * 0.12, y + h * 0.1);
+        ctx.moveTo(x + w * 0.75, y + h * 0.42);
+        ctx.lineTo(x + w * 0.88, y + h * 0.1);
+        ctx.stroke();
+        ctx.fillStyle = colors.fill;
+        roundRect(x + w * 0.16, y + h * 0.42, w * 0.68, h * 0.35, 5, true, true);
+        ctx.fillStyle = colors.stroke;
+        for (let index = 0; index < 3; index += 1) {
+            ctx.beginPath();
+            ctx.arc(x + w * (0.34 + index * 0.16), y + h * 0.59, h * 0.025, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.beginPath();
+        ctx.arc(x + w * 0.5, y + h * 0.24, w * 0.16, Math.PI * 1.15, Math.PI * 1.85);
+        ctx.arc(x + w * 0.5, y + h * 0.24, w * 0.27, Math.PI * 1.15, Math.PI * 1.85);
+        ctx.stroke();
+    }
+
+    function drawNasDevice(x, y, w, h, colors) {
+        ctx.fillStyle = colors.fill;
+        ctx.strokeStyle = colors.stroke;
+        ctx.lineWidth = 2;
+        roundRect(x + w * 0.18, y + h * 0.12, w * 0.64, h * 0.74, 6, true, true);
+        for (let index = 0; index < 3; index += 1) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+            roundRect(x + w * (0.27 + index * 0.16), y + h * 0.25, w * 0.1, h * 0.46, 3, true, false);
+            ctx.fillStyle = colors.stroke;
+            ctx.fillRect(x + w * (0.29 + index * 0.16), y + h * 0.61, w * 0.06, h * 0.03);
+        }
+    }
+
+    function drawPrinterDevice(x, y, w, h, colors) {
+        ctx.fillStyle = '#f8fafb';
+        ctx.strokeStyle = colors.stroke;
+        ctx.lineWidth = 2;
+        roundRect(x + w * 0.25, y + h * 0.08, w * 0.5, h * 0.28, 3, true, true);
+        ctx.fillStyle = colors.fill;
+        roundRect(x + w * 0.15, y + h * 0.34, w * 0.7, h * 0.36, 5, true, true);
+        ctx.fillStyle = '#ffffff';
+        roundRect(x + w * 0.24, y + h * 0.66, w * 0.52, h * 0.22, 3, true, true);
+        ctx.fillStyle = colors.stroke;
+        ctx.beginPath();
+        ctx.arc(x + w * 0.72, y + h * 0.48, h * 0.025, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    function drawRecordsDevice(x, y, w, h, colors) {
+        ctx.fillStyle = colors.fill;
+        ctx.strokeStyle = colors.stroke;
+        ctx.lineWidth = 2;
+        roundRect(x + w * 0.18, y + h * 0.08, w * 0.64, h * 0.82, 5, true, true);
+        for (let row = 1; row < 3; row += 1) {
+            ctx.beginPath();
+            ctx.moveTo(x + w * 0.2, y + h * (0.08 + row * 0.27));
+            ctx.lineTo(x + w * 0.8, y + h * (0.08 + row * 0.27));
+            ctx.stroke();
+        }
+        ctx.fillStyle = colors.stroke;
+        for (let row = 0; row < 3; row += 1) {
+            ctx.fillRect(x + w * 0.45, y + h * (0.2 + row * 0.23), w * 0.1, h * 0.025);
+        }
+    }
+
+    function drawBinderDevice(x, y, w, h, colors) {
+        const binderW = w * 0.18;
+        const startX = x + w * 0.22;
+        const fills = [colors.fill, '#f7e7b3', '#e4efe7'];
+
+        for (let index = 0; index < 3; index += 1) {
+            ctx.fillStyle = fills[index];
+            ctx.strokeStyle = colors.stroke;
+            roundRect(startX + index * binderW * 1.05, y + h * 0.12, binderW, h * 0.72, 3, true, true);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+            ctx.fillRect(startX + index * binderW * 1.05 + binderW * 0.25, y + h * 0.32, binderW * 0.5, h * 0.08);
+        }
+    }
+
+    function drawShredDevice(x, y, w, h, colors) {
+        ctx.fillStyle = colors.fill;
+        ctx.strokeStyle = colors.stroke;
+        ctx.lineWidth = 2;
+        roundRect(x + w * 0.25, y + h * 0.14, w * 0.5, h * 0.72, 5, true, true);
+        ctx.fillStyle = colors.stroke;
+        ctx.fillRect(x + w * 0.33, y + h * 0.28, w * 0.34, h * 0.045);
+        ctx.strokeStyle = colors.stroke;
+        for (let index = 0; index < 4; index += 1) {
+            ctx.beginPath();
+            ctx.moveTo(x + w * (0.34 + index * 0.08), y + h * 0.42);
+            ctx.lineTo(x + w * (0.32 + index * 0.08), y + h * 0.7);
+            ctx.stroke();
+        }
+    }
+
+    function drawObjectStatus(object, x, y, w, h) {
+        const indicator = object.state === 'ready' ? '#2f8f5b' : object.state === 'partial' ? '#c28622' : '#bd3b3b';
+
+        ctx.save();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x + w - 10, y + 10, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = indicator;
+        ctx.beginPath();
+        ctx.arc(x + w - 10, y + 10, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(x + 7, y + h - 6, Math.max(0, w - 14), 4);
+        ctx.fillStyle = indicator;
+        ctx.fillRect(x + 7, y + h - 6, Math.max(0, (w - 14) * object.score.percent / 100), 4);
+        ctx.restore();
     }
 
     function objectColors(object) {
@@ -349,7 +755,11 @@
     }
 
     function roundRect(x, y, width, height, radius, fill, stroke) {
-        const r = Math.min(radius, width / 2, height / 2);
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        const r = Math.max(0, Math.min(radius, width / 2, height / 2));
         ctx.beginPath();
         ctx.moveTo(x + r, y);
         ctx.arcTo(x + width, y, x + width, y + height, r);

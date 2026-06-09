@@ -26,6 +26,7 @@ When updating an existing deployment, run the latest `database/schema.sql` and `
 After login, the player configures a small physician office from the floor plan and the ISMS workbench:
 
 - The main application is organized into `Office`, `ISMS`, `Teaching`, and `Audits` tabs.
+- The Office tab shows a schematic physician-office floor plan with rooms, an aisle, doors, furniture, and type-specific device drawings.
 - Floor-plan assets open a device profile modal with linked controls, risks, evidence, findings, and corrective actions.
 - Device configuration happens inside the modal instead of a permanent side panel.
 - Inventory items track owners, classification, criticality, and verification status.
@@ -74,4 +75,4 @@ npx playwright install chromium
 npm run test:visual
 ```
 
-The Playwright test uses `site/.env.test`, resets the configured disposable database through `tests/seed_visual.php`, starts the PHP built-in server with `GAMEISM_ENV_FILE=site/.env.test`, logs in as a seeded user, checks that the canvas is nonblank, exercises the device profile/configuration modal, and checks the ISMS, Teaching Loop, and Audits tabs.
+The Playwright test uses `site/.env.test`, resets the configured disposable database through `tests/seed_visual.php`, starts the PHP built-in server with `GAMEISM_ENV_FILE=site/.env.test`, logs in as a seeded user, checks that the canvas is nonblank and includes the richer floor-plan layers, exercises the device profile/configuration modal, and checks the ISMS, Teaching Loop, and Audits tabs.
