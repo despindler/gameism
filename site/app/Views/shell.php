@@ -162,6 +162,20 @@
         </section>
 
         <div id="toast" class="toast" hidden></div>
+
+        <div id="device-modal" class="modal-backdrop" hidden>
+            <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="device-modal-title">
+                <header class="modal-header">
+                    <div>
+                        <p id="device-modal-kicker" class="eyebrow">Office asset</p>
+                        <h2 id="device-modal-title">Device</h2>
+                    </div>
+                    <button id="device-modal-close" class="icon-button" type="button" aria-label="Close device dialog">x</button>
+                </header>
+                <div id="device-modal-body" class="modal-body"></div>
+                <footer id="device-modal-actions" class="modal-actions"></footer>
+            </section>
+        </div>
     </main>
 
     <script src="assets/js/app.js?v=<?= $version ?>" defer></script>

@@ -12,6 +12,8 @@
         lastReport: null,
         activeIsmsTab: 'assets',
         activePrimaryTab: 'office',
+        deviceModalOpen: false,
+        deviceModalMode: 'profile',
     };
 
     const els = {
@@ -43,6 +45,12 @@
         internalAuditSummary: document.getElementById('internal-audit-summary'),
         auditPanelBody: document.getElementById('audit-panel-body'),
         toast: document.getElementById('toast'),
+        deviceModal: document.getElementById('device-modal'),
+        deviceModalKicker: document.getElementById('device-modal-kicker'),
+        deviceModalTitle: document.getElementById('device-modal-title'),
+        deviceModalClose: document.getElementById('device-modal-close'),
+        deviceModalBody: document.getElementById('device-modal-body'),
+        deviceModalActions: document.getElementById('device-modal-actions'),
     };
 
     const ctx = els.canvas.getContext('2d');
@@ -127,6 +135,7 @@
         renderIsmsPanel();
         renderTeachingPanel();
         renderAuditsPanel();
+        renderDeviceModal();
     }
 
     function renderHud() {
@@ -360,11 +369,121 @@
         const object = selectedObject();
 
         if (!object) {
-            els.assetDetails.innerHTML = '<p class="empty-state">Select an office asset on the floor plan.</p>';
+            els.assetDetails.innerHTML = '<p class="empty-state">Click a device on the floor plan to inspect its controls, risks, evidence, and actions.</p>';
             return;
         }
 
         const score = object.score.percent;
+        const enabledControls = object.controls.filter((control) => control.enabled).length;
+        const openFindings = findingsForObject(object.object_key).length;
+
+        els.assetDetails.innerHTML = `
+            <div class="asset-header">
+                <div>
+                    <h2>Selected Device</h2>
+                    <p class="asset-type">${escapeHtml(object.display_name)} - ${escapeHtml(typeLabel(object.object_type))}</p>
+                </div>
+                <span class="status-badge ${escapeAttr(object.state)}">${escapeHtml(stateLabel(object.state))}</span>
+            </div>
+            <div class="meter" aria-label="Asset readiness">
+                <span style="width: ${score}%"></span>
+            </div>
+            <div class="asset-summary-list">
+                <div class="summary-row">
+                    <strong>Readiness</strong>
+                    <span>${score}%</span>
+                </div>
+                <div class="summary-row">
+                    <strong>Controls enabled</strong>
+                    <span>${enabledControls}/${object.controls.length}</span>
+                </div>
+                <div class="summary-row">
+                    <strong>Open findings</strong>
+                    <span>${openFindings}</span>
+                </div>
+            </div>
+            <div class="teaching-actions">
+                <button type="button" data-open-device-profile="${escapeAttr(object.object_key)}">Inspect</button>
+                <button class="secondary" type="button" data-open-device-config="${escapeAttr(object.object_key)}">Configure</button>
+            </div>
+        `;
+
+        const profileButton = els.assetDetails.querySelector('[data-open-device-profile]');
+        const configButton = els.assetDetails.querySelector('[data-open-device-config]');
+        profileButton.addEventListener('click', () => openDeviceModal(object.object_key, 'profile'));
+        configButton.addEventListener('click', () => openDeviceModal(object.object_key, 'configure'));
+    }
+
+    function renderDeviceModal() {
+        if (!state.deviceModalOpen) {
+            els.deviceModal.hidden = true;
+            return;
+        }
+
+        const object = selectedObject();
+
+        if (!object) {
+            closeDeviceModal();
+            return;
+        }
+
+        els.deviceModal.hidden = false;
+        els.deviceModalKicker.textContent = typeLabel(object.object_type);
+        els.deviceModalTitle.textContent = object.display_name;
+
+        if (state.deviceModalMode === 'configure') {
+            renderDeviceConfiguration(object);
+        } else {
+            renderDeviceProfile(object);
+        }
+    }
+
+    function renderDeviceProfile(object) {
+        const findings = findingsForObject(object.object_key);
+        const risks = linkedItems(state.game.isms.risks, object.object_key);
+        const evidence = linkedItems(state.game.isms.evidence, object.object_key);
+        const actions = linkedItems(state.game.teaching.corrective_actions, object.object_key);
+        const enabledControls = object.controls.filter((control) => control.enabled).length;
+
+        els.deviceModalBody.innerHTML = `
+            <div class="asset-header">
+                <div>
+                    <p class="asset-type">${escapeHtml(typeLabel(object.object_type))}</p>
+                    <p class="control-description">${escapeHtml(object.display_name)} is linked to technical controls, ISMS evidence, risk treatment, and corrective actions.</p>
+                </div>
+                <span class="status-badge ${escapeAttr(object.state)}">${escapeHtml(stateLabel(object.state))}</span>
+            </div>
+            <div class="profile-grid">
+                <div class="profile-metric"><span>Readiness</span><strong>${object.score.percent}%</strong></div>
+                <div class="profile-metric"><span>Controls</span><strong>${enabledControls}/${object.controls.length}</strong></div>
+                <div class="profile-metric"><span>Findings</span><strong>${findings.length}</strong></div>
+            </div>
+            ${linkedSection('Key findings', findings.map((finding) => ({
+                title: finding.title,
+                meta: finding.recommendation,
+            })))}
+            ${linkedSection('Linked risks', risks.map((risk) => ({
+                title: risk.title,
+                meta: `${risk.treatment_status} - score ${risk.inherent_score}`,
+            })))}
+            ${linkedSection('Linked evidence', evidence.map((item) => ({
+                title: item.title,
+                meta: `${item.status} - ${item.owner}`,
+            })))}
+            ${linkedSection('Corrective actions', actions.map((action) => ({
+                title: action.title,
+                meta: `${action.status} - ${action.verification_status}`,
+            })))}
+        `;
+
+        els.deviceModalActions.innerHTML = `
+            <button type="button" data-device-modal-mode="configure">Configure</button>
+            <button class="secondary" type="button" data-device-modal-close>Close</button>
+        `;
+        bindDeviceModalActions();
+    }
+
+    function renderDeviceConfiguration(object) {
         const controls = object.controls.map((control) => `
             <label class="control-row">
                 <input type="checkbox" data-control="${escapeAttr(control.key)}" ${control.enabled ? 'checked' : ''} ${state.busy ? 'disabled' : ''}>
@@ -378,26 +497,90 @@
             </label>
         `).join('');
 
-        els.assetDetails.innerHTML = `
+        els.deviceModalBody.innerHTML = `
             <div class="asset-header">
                 <div>
-                    <h2>${escapeHtml(object.display_name)}</h2>
                     <p class="asset-type">${escapeHtml(typeLabel(object.object_type))}</p>
+                    <p class="control-description">Enable controls only when the office could demonstrate that they are implemented.</p>
                 </div>
                 <span class="status-badge ${escapeAttr(object.state)}">${escapeHtml(stateLabel(object.state))}</span>
             </div>
             <div class="meter" aria-label="Asset readiness">
-                <span style="width: ${score}%"></span>
+                <span style="width: ${object.score.percent}%"></span>
             </div>
-            <p class="control-description">${score}% configured for this scenario.</p>
             <div class="control-list">${controls}</div>
         `;
 
-        for (const checkbox of els.assetDetails.querySelectorAll('[data-control]')) {
+        els.deviceModalActions.innerHTML = `
+            <button class="secondary" type="button" data-device-modal-mode="profile">Back to profile</button>
+            <button type="button" data-device-modal-close>Done</button>
+        `;
+
+        for (const checkbox of els.deviceModalBody.querySelectorAll('[data-control]')) {
             checkbox.addEventListener('change', () => {
                 updateControl(object.object_key, checkbox.dataset.control, checkbox.checked);
             });
         }
+
+        bindDeviceModalActions();
+    }
+
+    function linkedSection(title, items) {
+        if (items.length === 0) {
+            return `
+                <section>
+                    <h3>${escapeHtml(title)}</h3>
+                    <p class="empty-state">Nothing linked here yet.</p>
+                </section>
+            `;
+        }
+
+        return `
+            <section>
+                <h3>${escapeHtml(title)}</h3>
+                <div class="linked-list">
+                    ${items.slice(0, 4).map((item) => `
+                        <article class="linked-item">
+                            <strong>${escapeHtml(item.title)}</strong>
+                            <span>${escapeHtml(item.meta)}</span>
+                        </article>
+                    `).join('')}
+                </div>
+            </section>
+        `;
+    }
+
+    function bindDeviceModalActions() {
+        for (const button of els.deviceModalActions.querySelectorAll('[data-device-modal-mode]')) {
+            button.addEventListener('click', () => {
+                state.deviceModalMode = button.dataset.deviceModalMode;
+                renderDeviceModal();
+            });
+        }
+
+        for (const button of els.deviceModalActions.querySelectorAll('[data-device-modal-close]')) {
+            button.addEventListener('click', closeDeviceModal);
+        }
+    }
+
+    function openDeviceModal(objectKey, mode = 'profile') {
+        state.selectedKey = objectKey;
+        state.deviceModalMode = mode;
+        state.deviceModalOpen = true;
+        render();
+    }
+
+    function closeDeviceModal() {
+        state.deviceModalOpen = false;
+        els.deviceModal.hidden = true;
+    }
+
+    function findingsForObject(objectKey) {
+        return state.game.findings.filter((finding) => finding.object_key === objectKey);
+    }
+
+    function linkedItems(items, objectKey) {
+        return items.filter((item) => item.object_key === objectKey);
     }
 
     function renderFindings() {
@@ -1087,8 +1270,21 @@
         const hit = [...state.hitBoxes].reverse().find((box) => x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h);
 
         if (hit) {
-            state.selectedKey = hit.key;
-            render();
+            openDeviceModal(hit.key, 'profile');
+        }
+    });
+
+    els.deviceModalClose.addEventListener('click', closeDeviceModal);
+
+    els.deviceModal.addEventListener('click', (event) => {
+        if (event.target === els.deviceModal) {
+            closeDeviceModal();
+        }
+    });
+
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && state.deviceModalOpen) {
+            closeDeviceModal();
         }
     });
 

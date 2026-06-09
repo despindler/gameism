@@ -156,3 +156,37 @@ Next steps:
 - Move device configuration into inspect/configure modals.
 - Improve floor-plan architecture, furniture, and schematic device drawings.
 - Add state-driven guidance hints.
+
+## UI Phase 2 - Device Profile And Configuration Modals
+
+Date: 2026-06-09
+
+Goal: Remove the permanent device control checklist from the Office side panel and make device interaction focused through modal drill-down.
+
+What changed:
+
+- Added a reusable device modal with profile and configuration modes.
+- Changed floor-plan clicks to open the device profile modal directly.
+- Moved the control checklist into the modal's Configure view.
+- Reworked the Office side panel into a compact selected-device summary with Inspect and Configure actions.
+- Added linked device context in the profile modal: findings, risks, evidence, and corrective actions.
+- Added backdrop, close button, Done button, and Escape-key behavior.
+- Updated Playwright visual smoke coverage for click-device, profile modal, Configure mode, and closing the modal.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+
+Known issues and decisions:
+
+- The side panel remains as an Office context summary for now; it no longer contains the configuration checklist.
+- The modal is custom CSS/JS, matching the existing dependency-light frontend.
+- Floor-plan geometry and device drawings are unchanged; architectural improvements are the next UI phase.
+
+Next steps:
+
+- Improve floor-plan architecture, furniture, corridors, and schematic device drawings.
+- Add state-driven user guidance hints.
+- Add process steppers for audit and certification-prep workflows.

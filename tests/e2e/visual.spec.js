@@ -31,6 +31,19 @@ test('authenticated office simulation renders and teaching loop works', async ({
   });
   expect(canvasHasPixels).toBe(true);
 
+  const canvas = page.locator('#office-canvas');
+  const box = await canvas.boundingBox();
+  await page.mouse.click(box.x + box.width * 0.16, box.y + box.height * 0.23);
+  const deviceDialog = page.getByRole('dialog');
+  await expect(deviceDialog).toBeVisible();
+  await expect(deviceDialog.getByRole('heading', { name: 'Reception PC' })).toBeVisible();
+  await expect(deviceDialog.getByRole('button', { name: 'Configure' })).toBeVisible();
+  await deviceDialog.getByRole('button', { name: 'Configure' }).click();
+  await expect(deviceDialog.getByText('Enable controls only when the office could demonstrate')).toBeVisible();
+  await expect(deviceDialog.getByText('Documented owner')).toBeVisible();
+  await deviceDialog.getByRole('button', { name: 'Done' }).click();
+  await expect(deviceDialog).toBeHidden();
+
   await page.getByRole('tab', { name: 'ISMS' }).click();
   await expect(page.getByRole('tab', { name: 'ISMS' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', { name: 'ISMS Workbench' })).toBeVisible();
