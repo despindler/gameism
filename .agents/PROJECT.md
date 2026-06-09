@@ -254,3 +254,35 @@ Next steps:
 - Add process steppers for audit and certification-prep workflows.
 - Add persistent dismissal or "focus this objective" once player progress becomes more nonlinear.
 - Consider moving hint rules to scenario metadata when multiple maps and roles are introduced.
+
+## UI Phase 5 - Internal Audit And Certification Prep Steppers
+
+Date: 2026-06-09
+
+Goal: Make the review workflows easier to follow by showing process progress for internal audit and certification preparation.
+
+What changed:
+
+- Added a reusable process stepper component with completed, current, and pending states.
+- Added an internal-audit stepper in the Teaching tab: Prepare scope, Sample gaps, Correct actions, and Management review.
+- Added a certification-prep stepper in the Audits tab: Evidence pack, Risk treatment, Readiness gate, and Certification check.
+- Derived step states from existing game state: findings, incident status, latest internal audit, corrective actions, evidence readiness, risk treatment, overall readiness, and latest certification audit report.
+- Updated Playwright coverage to verify both steppers and their post-run status text.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+
+Known issues and decisions:
+
+- Steppers are presentation-only; they do not block running audits.
+- Step rules are frontend-derived for now, matching the guidance-hint approach.
+- Certification readiness uses the current MVP thresholds and available report state, not a full auditor workflow engine.
+
+Next steps:
+
+- Add persistent objective focus or dismissal for guidance cards.
+- Add auditor-role views that inspect evidence samples and interview prompts.
+- Move workflow and stepper rules into scenario metadata once multiple scenarios are introduced.

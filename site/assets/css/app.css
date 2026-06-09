@@ -661,6 +661,110 @@ label {
     overflow: hidden;
 }
 
+.process-stepper {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+}
+
+.stepper-step {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 9px;
+    align-items: center;
+    min-height: 72px;
+    padding: 10px 22px 10px 12px;
+    border: 1px solid var(--line);
+    border-right: 0;
+    background: #fbfcfd;
+}
+
+.stepper-step:first-child {
+    border-radius: 8px 0 0 8px;
+}
+
+.stepper-step:last-child {
+    border-right: 1px solid var(--line);
+    border-radius: 0 8px 8px 0;
+}
+
+.stepper-step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    top: -1px;
+    right: -17px;
+    width: 34px;
+    height: calc(100% + 2px);
+    background: inherit;
+    border-top: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    transform: skewX(-28deg);
+    transform-origin: center;
+}
+
+.stepper-step.completed {
+    background: #eef8f2;
+}
+
+.stepper-step.current {
+    background: #eaf5f6;
+    border-color: rgba(23, 126, 137, 0.32);
+}
+
+.stepper-step.current:not(:last-child)::after {
+    border-color: rgba(23, 126, 137, 0.32);
+}
+
+.stepper-step.pending {
+    background: #fbfcfd;
+}
+
+.stepper-index {
+    position: relative;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: #9aa8b4;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 850;
+}
+
+.stepper-step.completed .stepper-index {
+    background: var(--good);
+}
+
+.stepper-step.current .stepper-index {
+    background: var(--accent);
+}
+
+.stepper-copy {
+    position: relative;
+    z-index: 3;
+    min-width: 0;
+}
+
+.stepper-copy h3 {
+    margin: 0;
+    font-size: 0.86rem;
+    letter-spacing: 0;
+}
+
+.stepper-copy p {
+    margin: 3px 0 0;
+    color: var(--muted);
+    font-size: 0.74rem;
+    line-height: 1.3;
+}
+
 .teaching-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(240px, 1fr));
@@ -912,6 +1016,22 @@ label {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .process-stepper {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .stepper-step,
+    .stepper-step:first-child,
+    .stepper-step:last-child {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+    }
+
+    .stepper-step:not(:last-child)::after {
+        display: none;
+    }
+
     .workspace {
         grid-template-columns: 1fr;
     }
@@ -976,6 +1096,16 @@ label {
 
     .guidance-card button {
         width: 100%;
+    }
+
+    .process-stepper {
+        grid-template-columns: 1fr;
+        padding: 10px;
+    }
+
+    .stepper-step {
+        min-height: 0;
+        padding: 10px;
     }
 
     .primary-tabs button {

@@ -46,6 +46,8 @@
         incidentList: document.getElementById('incident-list'),
         correctiveActionList: document.getElementById('corrective-action-list'),
         internalAuditSummary: document.getElementById('internal-audit-summary'),
+        internalAuditStepper: document.getElementById('internal-audit-stepper'),
+        certificationStepper: document.getElementById('certification-stepper'),
         auditPanelBody: document.getElementById('audit-panel-body'),
         toast: document.getElementById('toast'),
         deviceModal: document.getElementById('device-modal'),
@@ -1326,6 +1328,7 @@
         const teaching = state.game.teaching;
         const scores = state.game.score.teaching;
         els.teachingScoreSummary.textContent = `Incidents ${scores.incidents.percent}% - Corrective actions ${scores.corrective_actions.percent}%`;
+        els.internalAuditStepper.innerHTML = renderProcessStepper(internalAuditSteps());
 
         els.incidentList.innerHTML = teaching.incidents.length
             ? teaching.incidents.map(renderIncidentCard).join('')
@@ -1341,6 +1344,7 @@
 
     function renderAuditsPanel() {
         const report = state.lastReport || normalizeLatestCertificationAudit(state.game.latest_audit);
+        els.certificationStepper.innerHTML = renderProcessStepper(certificationPrepSteps(report));
 
         if (!report) {
             els.auditPanelBody.innerHTML = '<p class="empty-state">Run a certification audit to generate a simulated auditor report.</p>';
@@ -1363,6 +1367,116 @@
             summary: 'Latest saved certification-style audit report.',
             sampled_findings: report.findings || [],
         };
+    }
+
+    function renderProcessStepper(steps) {
+        return steps.map((step, index) => `
+            <article class="stepper-step ${escapeAttr(step.state)}">
+                <span class="stepper-index">${escapeHtml(step.state === 'completed' ? 'OK' : String(index + 1))}</span>
+                <div class="stepper-copy">
+                    <h3>${escapeHtml(step.title)}</h3>
+                    <p>${escapeHtml(step.detail)}</p>
+                </div>
+            </article>
+        `).join('');
+    }
+
+    function internalAuditSteps() {
+        const activeIncidents = state.game.teaching.incidents.filter((incident) => incident.status === 'active').length;
+        const openActions = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
+        const hasAudit = Boolean(state.game.teaching.latest_internal_audit);
+        const auditFindings = hasAudit ? (state.game.teaching.latest_internal_audit.findings || []).length : 0;
+        const prepComplete = hasAudit || (state.game.findings.length <= 8 && activeIncidents === 0);
+        const actionsComplete = hasAudit && openActions === 0;
+        const reportClean = hasAudit && auditFindings === 0 && openActions === 0;
+        const activeDrillText = activeIncidents === 1
+            ? '1 active drill should be closed before sampling.'
+            : `${activeIncidents} active drills should be closed before sampling.`;
+
+        return markCurrentStep([
+            {
+                title: 'Prepare scope',
+                detail: hasAudit
+                    ? 'Scope was sampled in the latest internal audit.'
+                    : activeIncidents > 0
+                        ? activeDrillText
+                        : `${state.game.findings.length} current findings available for sampling.`,
+                done: prepComplete,
+            },
+            {
+                title: 'Sample gaps',
+                detail: hasAudit
+                    ? `${auditFindings} findings sampled in the latest internal audit.`
+                    : 'Run internal audit to sample controls, evidence, and actions.',
+                done: hasAudit,
+            },
+            {
+                title: 'Correct actions',
+                detail: openActions > 0
+                    ? `${openActions} corrective actions still need closure or effectiveness checks.`
+                    : 'Corrective actions are closed or none have been opened.',
+                done: actionsComplete,
+            },
+            {
+                title: 'Management review',
+                detail: reportClean
+                    ? 'Internal audit is clean enough for review evidence.'
+                    : 'Review sampled findings and record improvement decisions.',
+                done: reportClean,
+            },
+        ]);
+    }
+
+    function certificationPrepSteps(report) {
+        const scores = state.game.score.artifacts;
+        const evidenceIncomplete = state.game.isms.evidence.filter(isEvidenceIncomplete).length;
+        const untreatedRisks = state.game.isms.risks.filter(isRiskUntreated).length;
+        const openActions = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
+        const hasAuditReport = Boolean(report);
+        const evidenceReady = scores.evidence.percent >= 80 && evidenceIncomplete === 0;
+        const risksReady = scores.risks.percent >= 80 && untreatedRisks === 0;
+        const readinessReady = state.game.score.overall.percent >= 85 && openActions === 0;
+        const auditPassed = hasAuditReport && report.status !== 'not_ready' && report.major_findings === 0;
+
+        return markCurrentStep([
+            {
+                title: 'Evidence pack',
+                detail: evidenceReady
+                    ? 'Evidence checklist is audit-ready.'
+                    : `${evidenceIncomplete} evidence items still need ready or reviewed status.`,
+                done: evidenceReady,
+            },
+            {
+                title: 'Risk treatment',
+                detail: risksReady
+                    ? 'Risk register treatments are ready for auditor review.'
+                    : `${untreatedRisks} risks still need treatment or acceptance.`,
+                done: risksReady,
+            },
+            {
+                title: 'Readiness gate',
+                detail: readinessReady
+                    ? `${state.game.score.overall.percent}% readiness with corrective actions closed.`
+                    : `${state.game.score.overall.percent}% readiness and ${openActions} open corrective actions.`,
+                done: readinessReady,
+            },
+            {
+                title: 'Certification check',
+                detail: hasAuditReport
+                    ? `${statusLabel(report.status)} with ${report.major_findings} major and ${report.minor_findings} minor findings.`
+                    : 'Run certification audit after the preparation gates are clear.',
+                done: auditPassed,
+            },
+        ]);
+    }
+
+    function markCurrentStep(steps) {
+        const currentIndex = steps.findIndex((step) => !step.done);
+
+        return steps.map((step, index) => ({
+            ...step,
+            state: step.done ? 'completed' : index === currentIndex ? 'current' : 'pending',
+        }));
     }
 
     function renderIncidentCard(incident) {

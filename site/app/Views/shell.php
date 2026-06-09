@@ -140,6 +140,7 @@
                 </div>
                 <button id="run-internal-audit" type="button">Internal audit</button>
             </header>
+            <div id="internal-audit-stepper" class="process-stepper" aria-label="Internal audit process"></div>
             <div class="teaching-grid">
                 <section>
                     <h3>Incident Drills</h3>
@@ -166,6 +167,7 @@
                     </div>
                     <button id="run-audit" type="button">Certification audit</button>
                 </header>
+                <div id="certification-stepper" class="process-stepper" aria-label="Certification preparation process"></div>
                 <div id="audit-panel-body" class="audit-panel-body">
                     <p class="empty-state">Run a certification audit to generate a simulated auditor report.</p>
                 </div>

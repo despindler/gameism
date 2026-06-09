@@ -103,17 +103,27 @@ test('authenticated office simulation renders and teaching loop works', async ({
 
   await page.getByRole('tab', { name: 'Teaching' }).click();
   await expect(page.getByRole('heading', { name: 'Teaching Loop' })).toBeVisible();
+  await expect(page.locator('#internal-audit-stepper')).toContainText('Prepare scope');
+  await expect(page.locator('#internal-audit-stepper')).toContainText('Sample gaps');
+  await expect(page.locator('#internal-audit-stepper')).toContainText('Correct actions');
+  await expect(page.locator('#internal-audit-stepper')).toContainText('Management review');
   await page.getByRole('button', { name: 'Start drill' }).first().click();
   await expect(page.getByText('Incident drill started.')).toBeVisible();
   await expect(page.getByRole('heading', { name: /Close phishing drill gaps|Prove containment|Make backup recovery/ })).toBeVisible();
 
   await page.getByRole('button', { name: 'Internal audit' }).click();
   await expect(page.getByText('Internal audit completed.')).toBeVisible();
+  await expect(page.locator('#internal-audit-stepper')).toContainText('findings sampled');
   await expect(page.getByText('corrective actions created from this sample')).toBeVisible();
 
   await page.getByRole('tab', { name: 'Audits' }).click();
   await expect(page.getByRole('heading', { name: 'Audits' })).toBeVisible();
+  await expect(page.locator('#certification-stepper')).toContainText('Evidence pack');
+  await expect(page.locator('#certification-stepper')).toContainText('Risk treatment');
+  await expect(page.locator('#certification-stepper')).toContainText('Readiness gate');
+  await expect(page.locator('#certification-stepper')).toContainText('Certification check');
   await page.getByRole('button', { name: 'Certification audit' }).click();
   await expect(page.getByText('Audit report created.')).toBeVisible();
+  await expect(page.locator('#certification-stepper')).toContainText('major');
   await expect(page.getByRole('heading', { name: 'Simulated Audit Report' })).toBeVisible();
 });
