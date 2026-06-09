@@ -80,3 +80,44 @@ Next steps:
 - Add corrective actions and incident-driven teaching events.
 - Split the simulated audit into internal audit and certification audit modes.
 - Add admin-tunable scenario and scoring settings.
+
+## Milestone 3 - Teaching Loop, Incidents, Corrective Actions, And Internal Audit
+
+Date: 2026-06-09
+
+Goal: Add the first active learning loop where realistic incidents expose gaps, corrective actions track remediation, and internal audits create follow-up work.
+
+What changed:
+
+- Added `incident_events`, `corrective_actions`, and `internal_audit_reports` tables to `database/schema.sql`.
+- Added seed settings for internal audit action limits and corrective action due days.
+- Added three initial incident drills: phishing against EHR access, lost nurse laptop, and backup restore failure.
+- Added per-user initialization for incident drills.
+- Added API endpoints for starting incidents, resolving incidents, updating corrective actions, and running internal audits.
+- Extended readiness scoring and findings to include active incidents and unverified corrective actions.
+- Added a Teaching Loop UI panel with incident drills, corrective action controls, and latest internal audit summary.
+- Updated smoke tests to verify incident activation, corrective action verification, incident resolution, internal audit persistence, and stable validation errors.
+
+How to run:
+
+- Existing deployments should rerun `database/schema.sql`, then `database/seed.sql`.
+- Existing users receive the incident drill rows on their next game-state initialization after the schema is updated.
+
+How to verify:
+
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `node --check site/assets/js/app.js`
+- `git diff --check`
+
+Known issues and decisions:
+
+- Corrective actions are structured rows with status and verification fields, not a full workflow engine.
+- Internal audits sample current findings and create up to three corrective actions; repeated audits may reuse existing action keys for the same finding.
+- Incident drills are scenario-defined and deterministic, not time-randomized events yet.
+
+Next steps:
+
+- Add time pressure, due-date consequences, and recurring review cycles.
+- Add an auditor mode that uses sampled evidence and interviews.
+- Add admin-tunable incident frequency, scoring weights, and audit strictness.

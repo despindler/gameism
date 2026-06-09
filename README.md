@@ -1,6 +1,6 @@
 # ISMS Office
 
-ISMS Office is a small browser simulation for setting up a physician office with auditable information security controls. The current MVP includes local username/password authentication, a canvas floor plan, clickable workplace assets, control toggles, readiness scoring, an ISMS workbench, and a simulated audit report.
+ISMS Office is a small browser simulation for setting up a physician office with auditable information security controls. The current MVP includes local username/password authentication, a canvas floor plan, clickable workplace assets, control toggles, readiness scoring, an ISMS workbench, incident drills, corrective actions, internal audits, and a simulated certification audit report.
 
 ## Structure
 
@@ -29,6 +29,9 @@ After login, the player configures a small physician office from the floor plan 
 - Inventory items track owners, classification, criticality, and verification status.
 - Risk register items track likelihood, impact, owner, and treatment status.
 - Evidence items track whether audit evidence is missing, draft, ready, or reviewed.
+- Incident drills create practical teaching situations and linked corrective actions.
+- Corrective actions must be completed and verified before related drills can be resolved.
+- Internal audits sample current gaps and create corrective actions from the highest-priority findings.
 - Readiness scores combine controls and ISMS artifacts across security, documentation, resilience, and audit categories.
 - The simulated audit report samples missing controls, untreated risks, unverified assets, and incomplete evidence.
 

@@ -28,7 +28,8 @@ final class GameStateService
         $repository->ensureInitialized($user['id']);
         $objects = $repository->objects($user['id']);
         $isms = $repository->ismsArtifacts($user['id']);
-        $evaluation = $this->scoring->evaluate($objects, $isms);
+        $teaching = $repository->teachingState($user['id']);
+        $evaluation = $this->scoring->evaluate($objects, $isms, $teaching);
 
         return [
             'player' => [
@@ -46,6 +47,7 @@ final class GameStateService
                 'objects' => $this->hydrateObjects($objects, $evaluation['object_scores']),
             ],
             'isms' => $isms,
+            'teaching' => $teaching,
             'score' => $evaluation['score'],
             'findings' => $evaluation['findings'],
             'latest_audit' => $repository->latestAuditReport($user['id']),
@@ -144,12 +146,116 @@ final class GameStateService
      * @param array{id:int,username:string,display_name:string,role:string} $user
      * @return array<string,mixed>
      */
+    public function startIncident(array $user, string $incidentKey): array
+    {
+        $incidentKey = trim($incidentKey);
+
+        if ($incidentKey === '') {
+            throw new ApiException('INVALID_INCIDENT', 400, 'An incident key is required.');
+        }
+
+        $repository = $this->repository();
+        $repository->ensureInitialized($user['id']);
+        $repository->startIncident($user['id'], $incidentKey);
+
+        return $this->stateForUser($user);
+    }
+
+    /**
+     * @param array{id:int,username:string,display_name:string,role:string} $user
+     * @return array<string,mixed>
+     */
+    public function resolveIncident(array $user, string $incidentKey): array
+    {
+        $incidentKey = trim($incidentKey);
+
+        if ($incidentKey === '') {
+            throw new ApiException('INVALID_INCIDENT', 400, 'An incident key is required.');
+        }
+
+        $repository = $this->repository();
+        $repository->ensureInitialized($user['id']);
+        $repository->resolveIncident($user['id'], $incidentKey);
+
+        return $this->stateForUser($user);
+    }
+
+    /**
+     * @param array{id:int,username:string,display_name:string,role:string} $user
+     * @param array<string,mixed> $fields
+     * @return array<string,mixed>
+     */
+    public function updateCorrectiveAction(array $user, string $actionKey, array $fields): array
+    {
+        $actionKey = trim($actionKey);
+
+        if ($actionKey === '') {
+            throw new ApiException('INVALID_CORRECTIVE_ACTION', 400, 'A corrective action key is required.');
+        }
+
+        $repository = $this->repository();
+        $repository->ensureInitialized($user['id']);
+        $repository->updateCorrectiveAction($user['id'], $actionKey, $this->validateCorrectiveActionFields($fields));
+
+        return $this->stateForUser($user);
+    }
+
+    /**
+     * @param array{id:int,username:string,display_name:string,role:string} $user
+     * @return array<string,mixed>
+     */
+    public function runInternalAudit(array $user): array
+    {
+        $repository = $this->repository();
+        $repository->ensureInitialized($user['id']);
+        $objects = $repository->objects($user['id']);
+        $isms = $repository->ismsArtifacts($user['id']);
+        $teaching = $repository->teachingState($user['id']);
+        $evaluation = $this->scoring->evaluate($objects, $isms, $teaching);
+        $findings = array_slice($evaluation['findings'], 0, 6);
+        $actionsToCreate = array_slice($findings, 0, 3);
+
+        foreach ($actionsToCreate as $finding) {
+            $repository->createCorrectiveAction($user['id'], [
+                'action_key' => 'audit_' . substr(sha1((string) $finding['control_key']), 0, 20),
+                'source_type' => 'internal_audit',
+                'source_key' => (string) $finding['control_key'],
+                'object_key' => $finding['object_key'],
+                'title' => 'Internal audit: ' . $finding['title'],
+                'owner' => 'Practice Manager',
+                'due_days' => 14,
+                'status' => 'open',
+                'verification_status' => 'not_checked',
+                'notes' => $finding['recommendation'],
+            ]);
+        }
+
+        $majorCount = count(array_filter($findings, static fn (array $finding): bool => $finding['severity'] === 'major'));
+        $report = [
+            'scope' => 'Small physician office ISMS controls, evidence, incidents, and corrective actions',
+            'status' => $findings === [] ? 'passed' : ($majorCount > 0 ? 'major_findings' : 'minor_findings'),
+            'score' => $evaluation['score'],
+            'findings' => $findings,
+            'corrective_actions_created' => count($actionsToCreate),
+        ];
+        $repository->saveInternalAuditReport($user['id'], $report);
+
+        return [
+            'report' => $report,
+            'game_state' => $this->stateForUser($user),
+        ];
+    }
+
+    /**
+     * @param array{id:int,username:string,display_name:string,role:string} $user
+     * @return array<string,mixed>
+     */
     public function runAudit(array $user): array
     {
         $repository = $this->repository();
         $repository->ensureInitialized($user['id']);
         $objects = $repository->objects($user['id']);
-        $evaluation = $this->scoring->evaluate($objects, $repository->ismsArtifacts($user['id']));
+        $evaluation = $this->scoring->evaluate($objects, $repository->ismsArtifacts($user['id']), $repository->teachingState($user['id']));
         $report = $this->scoring->auditReport($evaluation);
         $repository->saveAuditReport($user['id'], $report);
 
@@ -225,6 +331,29 @@ final class GameStateService
                 $validated[$field] = $this->boundedText((string) $value, $field === 'owner' ? 120 : 2000);
             } else {
                 throw new ApiException('INVALID_ISMS_FIELD', 400, 'That field cannot be updated for this ISMS item.', ['field' => $field]);
+            }
+        }
+
+        return $validated;
+    }
+
+    /**
+     * @param array<string,mixed> $fields
+     * @return array<string,mixed>
+     */
+    private function validateCorrectiveActionFields(array $fields): array
+    {
+        $validated = [];
+
+        foreach ($fields as $field => $value) {
+            if ($field === 'status') {
+                $validated[$field] = $this->enumValue((string) $value, ['open', 'in_progress', 'done', 'verified'], 'INVALID_CORRECTIVE_ACTION_STATUS');
+            } elseif ($field === 'verification_status') {
+                $validated[$field] = $this->enumValue((string) $value, ['not_checked', 'effective', 'ineffective'], 'INVALID_VERIFICATION_STATUS');
+            } elseif (in_array($field, ['owner', 'notes'], true)) {
+                $validated[$field] = $this->boundedText((string) $value, $field === 'owner' ? 120 : 2000);
+            } else {
+                throw new ApiException('INVALID_CORRECTIVE_ACTION_FIELD', 400, 'That field cannot be updated for this corrective action.', ['field' => $field]);
             }
         }
 

@@ -26,6 +26,7 @@
         scoreResilience: document.getElementById('score-resilience'),
         scoreAudit: document.getElementById('score-audit'),
         runAudit: document.getElementById('run-audit'),
+        runInternalAudit: document.getElementById('run-internal-audit'),
         logout: document.getElementById('logout'),
         canvas: document.getElementById('office-canvas'),
         assetDetails: document.getElementById('asset-details'),
@@ -33,6 +34,10 @@
         ismsTabs: document.getElementById('isms-tabs'),
         ismsBody: document.getElementById('isms-body'),
         ismsScoreSummary: document.getElementById('isms-score-summary'),
+        teachingScoreSummary: document.getElementById('teaching-score-summary'),
+        incidentList: document.getElementById('incident-list'),
+        correctiveActionList: document.getElementById('corrective-action-list'),
+        internalAuditSummary: document.getElementById('internal-audit-summary'),
         auditPanel: document.getElementById('audit-panel'),
         toast: document.getElementById('toast'),
     };
@@ -116,6 +121,7 @@
         renderDetails();
         renderFindings();
         renderIsmsPanel();
+        renderTeachingPanel();
     }
 
     function renderHud() {
@@ -568,6 +574,208 @@
         }
     }
 
+    function renderTeachingPanel() {
+        const teaching = state.game.teaching;
+        const scores = state.game.score.teaching;
+        els.teachingScoreSummary.textContent = `Incidents ${scores.incidents.percent}% - Corrective actions ${scores.corrective_actions.percent}%`;
+
+        els.incidentList.innerHTML = teaching.incidents.length
+            ? teaching.incidents.map(renderIncidentCard).join('')
+            : '<p class="empty-state">No incident drills are available.</p>';
+
+        els.correctiveActionList.innerHTML = teaching.corrective_actions.length
+            ? teaching.corrective_actions.map(renderCorrectiveActionCard).join('')
+            : '<p class="empty-state">No corrective actions have been opened.</p>';
+
+        els.internalAuditSummary.innerHTML = renderInternalAuditSummary(teaching.latest_internal_audit);
+        bindTeachingControls();
+    }
+
+    function renderIncidentCard(incident) {
+        const buttonHtml = incident.status === 'available'
+            ? `<button type="button" data-incident-action="start" data-incident-key="${escapeAttr(incident.incident_key)}" ${state.busy ? 'disabled' : ''}>Start drill</button>`
+            : incident.status === 'active'
+                ? `<button type="button" data-incident-action="resolve" data-incident-key="${escapeAttr(incident.incident_key)}" ${state.busy ? 'disabled' : ''}>Resolve</button>`
+                : '';
+
+        return `
+            <article class="teaching-card">
+                <header>
+                    <h4>${escapeHtml(incident.title)}</h4>
+                    <span class="status-badge ${escapeAttr(statusClass(incident.status))}">${escapeHtml(incident.status)}</span>
+                </header>
+                <p class="control-description">${escapeHtml(incident.description)}</p>
+                <p class="control-description">${escapeHtml(incident.status === 'available' ? incident.trigger_text : incident.lesson_text)}</p>
+                <div class="teaching-actions">${buttonHtml}</div>
+            </article>
+        `;
+    }
+
+    function renderCorrectiveActionCard(action) {
+        return `
+            <article class="teaching-card">
+                <header>
+                    <h4>${escapeHtml(action.title)}</h4>
+                    <span class="status-badge ${escapeAttr(statusClass(action.status))}">${escapeHtml(action.status)}</span>
+                </header>
+                <div class="artifact-meta">${escapeHtml(typeLabel(action.source_type))} - due in ${action.due_days} days</div>
+                <div class="compact-form">
+                    ${selectActionControl(action.action_key, 'status', action.status, [
+                        ['open', 'Open'],
+                        ['in_progress', 'In progress'],
+                        ['done', 'Done'],
+                        ['verified', 'Verified'],
+                    ])}
+                    ${selectActionControl(action.action_key, 'verification_status', action.verification_status, [
+                        ['not_checked', 'Not checked'],
+                        ['effective', 'Effective'],
+                        ['ineffective', 'Ineffective'],
+                    ])}
+                    ${textActionControl(action.action_key, 'owner', action.owner, 'Owner')}
+                    ${textareaActionControl(action.action_key, 'notes', action.notes, 'Notes')}
+                </div>
+            </article>
+        `;
+    }
+
+    function renderInternalAuditSummary(report) {
+        if (!report) {
+            return '<p class="empty-state">Run an internal audit to sample current gaps and create corrective actions.</p>';
+        }
+
+        const findings = report.findings || [];
+
+        return `
+            <article class="teaching-card">
+                <header>
+                    <h4>${escapeHtml(statusLabel(report.status))}</h4>
+                    <span class="status-badge ${escapeAttr(report.status === 'passed' ? 'ready' : 'needs_attention')}">${escapeHtml(String(report.score.overall.percent))}%</span>
+                </header>
+                <div class="artifact-meta">${escapeHtml(report.scope)}</div>
+                <p class="control-description">${report.corrective_actions_created} corrective actions created from this sample.</p>
+                ${findings.length ? findings.slice(0, 4).map((finding) => `
+                    <article class="finding-item">
+                        <div class="finding-title">${escapeHtml(finding.title)}</div>
+                        <div class="finding-meta">${escapeHtml(finding.object_name)} - ${escapeHtml(finding.severity)}</div>
+                    </article>
+                `).join('') : '<p class="empty-state">No internal audit findings.</p>'}
+            </article>
+        `;
+    }
+
+    function selectActionControl(actionKey, field, value, options) {
+        const optionHtml = options.map(([optionValue, label]) => `
+            <option value="${escapeAttr(optionValue)}" ${String(value) === String(optionValue) ? 'selected' : ''}>${escapeHtml(label)}</option>
+        `).join('');
+
+        return `
+            <label>
+                ${escapeHtml(fieldLabel(field))}
+                <select data-action-key="${escapeAttr(actionKey)}" data-action-field="${escapeAttr(field)}" ${state.busy ? 'disabled' : ''}>
+                    ${optionHtml}
+                </select>
+            </label>
+        `;
+    }
+
+    function textActionControl(actionKey, field, value, label) {
+        return `
+            <label>
+                ${escapeHtml(label)}
+                <input value="${escapeAttr(value)}" data-initial="${escapeAttr(value)}" data-action-key="${escapeAttr(actionKey)}" data-action-field="${escapeAttr(field)}" ${state.busy ? 'disabled' : ''}>
+            </label>
+        `;
+    }
+
+    function textareaActionControl(actionKey, field, value, label) {
+        return `
+            <label>
+                ${escapeHtml(label)}
+                <textarea data-initial="${escapeAttr(value)}" data-action-key="${escapeAttr(actionKey)}" data-action-field="${escapeAttr(field)}" ${state.busy ? 'disabled' : ''}>${escapeHtml(value)}</textarea>
+            </label>
+        `;
+    }
+
+    function bindTeachingControls() {
+        for (const button of els.incidentList.querySelectorAll('[data-incident-action]')) {
+            button.addEventListener('click', () => {
+                updateIncident(button.dataset.incidentAction, button.dataset.incidentKey);
+            });
+        }
+
+        for (const select of els.correctiveActionList.querySelectorAll('select[data-action-key]')) {
+            select.addEventListener('change', () => {
+                updateCorrectiveAction(select.dataset.actionKey, select.dataset.actionField, select.value);
+            });
+        }
+
+        for (const input of els.correctiveActionList.querySelectorAll('input[data-action-key], textarea[data-action-key]')) {
+            input.addEventListener('blur', () => {
+                if (input.value !== input.dataset.initial) {
+                    updateCorrectiveAction(input.dataset.actionKey, input.dataset.actionField, input.value);
+                }
+            });
+
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' && input.tagName === 'INPUT') {
+                    input.blur();
+                }
+            });
+        }
+    }
+
+    async function updateIncident(action, incidentKey) {
+        if (state.busy) {
+            return;
+        }
+
+        state.busy = true;
+
+        try {
+            const endpoint = action === 'resolve' ? 'resolve-incident' : 'start-incident';
+            const payload = await api(endpoint, {
+                method: 'POST',
+                body: {
+                    incident_key: incidentKey,
+                },
+            });
+            state.game = payload.game_state;
+            showToast(action === 'resolve' ? 'Incident drill resolved.' : 'Incident drill started.');
+        } catch (error) {
+            showToast(error.message);
+        } finally {
+            state.busy = false;
+            render();
+        }
+    }
+
+    async function updateCorrectiveAction(actionKey, field, value) {
+        if (state.busy) {
+            return;
+        }
+
+        state.busy = true;
+
+        try {
+            const payload = await api('update-corrective-action', {
+                method: 'POST',
+                body: {
+                    action_key: actionKey,
+                    fields: {
+                        [field]: value,
+                    },
+                },
+            });
+            state.game = payload.game_state;
+            showToast('Corrective action updated.');
+        } catch (error) {
+            showToast(error.message);
+        } finally {
+            state.busy = false;
+            render();
+        }
+    }
+
     async function updateControl(objectKey, controlKey, enabled) {
         if (state.busy) {
             return;
@@ -615,6 +823,27 @@
         } finally {
             state.busy = false;
             els.runAudit.disabled = false;
+            render();
+        }
+    }
+
+    async function runInternalAudit() {
+        if (state.busy) {
+            return;
+        }
+
+        state.busy = true;
+        els.runInternalAudit.disabled = true;
+
+        try {
+            const payload = await api('run-internal-audit', { method: 'POST' });
+            state.game = payload.game_state;
+            showToast('Internal audit completed.');
+        } catch (error) {
+            showToast(error.message);
+        } finally {
+            state.busy = false;
+            els.runInternalAudit.disabled = false;
             render();
         }
     }
@@ -682,7 +911,25 @@
             certification_recommended: 'Recommended',
             conditional: 'Conditional',
             not_ready: 'Not ready',
+            passed: 'Passed',
+            major_findings: 'Major findings',
+            minor_findings: 'Minor findings',
         }[value] || value;
+    }
+
+    function statusClass(value) {
+        return {
+            resolved: 'ready',
+            verified: 'ready',
+            passed: 'ready',
+            active: 'needs_attention',
+            open: 'needs_attention',
+            major_findings: 'needs_attention',
+            available: 'partial',
+            in_progress: 'partial',
+            done: 'partial',
+            minor_findings: 'partial',
+        }[value] || 'partial';
     }
 
     function showToast(message) {
@@ -754,6 +1001,7 @@
     });
 
     els.runAudit.addEventListener('click', runAudit);
+    els.runInternalAudit.addEventListener('click', runInternalAudit);
 
     els.ismsTabs.addEventListener('click', (event) => {
         const button = event.target.closest('[data-isms-tab]');

@@ -127,6 +127,28 @@ final class GameStateRepository
                 ]);
             }
 
+            foreach (GameCatalog::incidentDrills() as $definition) {
+                $statement = $this->pdo->prepare(
+                    'INSERT IGNORE INTO incident_events
+                        (user_id, incident_key, object_key, title, description, severity, status, trigger_text, lesson_text, required_controls_json, required_evidence_json)
+                     VALUES
+                        (:user_id, :incident_key, :object_key, :title, :description, :severity, :status, :trigger_text, :lesson_text, :required_controls_json, :required_evidence_json)'
+                );
+                $statement->execute([
+                    'user_id' => $userId,
+                    'incident_key' => $definition['incident_key'],
+                    'object_key' => $definition['object_key'],
+                    'title' => $definition['title'],
+                    'description' => $definition['description'],
+                    'severity' => $definition['severity'],
+                    'status' => $definition['status'],
+                    'trigger_text' => $definition['trigger_text'],
+                    'lesson_text' => $definition['lesson_text'],
+                    'required_controls_json' => $this->encodeJson($definition['required_controls']),
+                    'required_evidence_json' => $this->encodeJson($definition['required_evidence']),
+                ]);
+            }
+
             $this->pdo->commit();
         } catch (\Throwable $exception) {
             $this->pdo->rollBack();
@@ -362,6 +384,296 @@ final class GameStateRepository
             $fields,
             ['status', 'owner', 'notes']
         );
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function teachingState(int $userId): array
+    {
+        return [
+            'incidents' => $this->incidentEvents($userId),
+            'corrective_actions' => $this->correctiveActions($userId),
+            'latest_internal_audit' => $this->latestInternalAuditReport($userId),
+        ];
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public function incidentEvents(int $userId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, incident_key, object_key, title, description, severity, status, trigger_text, lesson_text,
+                    required_controls_json, required_evidence_json, started_at, resolved_at, updated_at
+             FROM incident_events
+             WHERE user_id = :user_id
+             ORDER BY FIELD(status, "active", "available", "resolved"), id ASC'
+        );
+        $statement->execute(['user_id' => $userId]);
+        $items = [];
+
+        foreach ($statement->fetchAll() as $record) {
+            $items[] = [
+                'id' => (int) $record['id'],
+                'incident_key' => (string) $record['incident_key'],
+                'object_key' => (string) $record['object_key'],
+                'title' => (string) $record['title'],
+                'description' => (string) $record['description'],
+                'severity' => (string) $record['severity'],
+                'status' => (string) $record['status'],
+                'trigger_text' => (string) $record['trigger_text'],
+                'lesson_text' => (string) $record['lesson_text'],
+                'required_controls' => $this->decodeJson((string) $record['required_controls_json']),
+                'required_evidence' => $this->decodeJson((string) $record['required_evidence_json']),
+                'started_at' => $record['started_at'] !== null ? (string) $record['started_at'] : null,
+                'resolved_at' => $record['resolved_at'] !== null ? (string) $record['resolved_at'] : null,
+                'updated_at' => (string) $record['updated_at'],
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public function correctiveActions(int $userId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, action_key, source_type, source_key, object_key, title, owner, due_days, status, verification_status, notes, closed_at, updated_at
+             FROM corrective_actions
+             WHERE user_id = :user_id
+             ORDER BY FIELD(status, "open", "in_progress", "done", "verified"), id DESC'
+        );
+        $statement->execute(['user_id' => $userId]);
+        $items = [];
+
+        foreach ($statement->fetchAll() as $record) {
+            $items[] = [
+                'id' => (int) $record['id'],
+                'action_key' => (string) $record['action_key'],
+                'source_type' => (string) $record['source_type'],
+                'source_key' => (string) $record['source_key'],
+                'object_key' => (string) $record['object_key'],
+                'title' => (string) $record['title'],
+                'owner' => (string) $record['owner'],
+                'due_days' => (int) $record['due_days'],
+                'status' => (string) $record['status'],
+                'verification_status' => (string) $record['verification_status'],
+                'notes' => (string) ($record['notes'] ?? ''),
+                'closed_at' => $record['closed_at'] !== null ? (string) $record['closed_at'] : null,
+                'updated_at' => (string) $record['updated_at'],
+            ];
+        }
+
+        return $items;
+    }
+
+    public function startIncident(int $userId, string $incidentKey): void
+    {
+        $incident = $this->incidentEvent($userId, $incidentKey);
+
+        if ($incident['status'] === 'resolved') {
+            throw new ApiException('INCIDENT_ALREADY_RESOLVED', 409, 'That incident drill has already been resolved.');
+        }
+
+        if ($incident['status'] === 'available') {
+            $statement = $this->pdo->prepare(
+                'UPDATE incident_events
+                 SET status = "active", started_at = COALESCE(started_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP
+                 WHERE user_id = :user_id AND incident_key = :incident_key'
+            );
+            $statement->execute(['user_id' => $userId, 'incident_key' => $incidentKey]);
+        }
+
+        $definition = $this->incidentDefinition($incidentKey);
+        $this->createCorrectiveAction($userId, [
+            'action_key' => 'incident_' . $incidentKey,
+            'source_type' => 'incident',
+            'source_key' => $incidentKey,
+            'object_key' => $incident['object_key'],
+            'title' => $definition['corrective_action_title'] ?? ('Resolve incident drill: ' . $incident['title']),
+            'owner' => $definition['owner'] ?? 'Practice Manager',
+            'due_days' => 7,
+            'status' => 'open',
+            'verification_status' => 'not_checked',
+            'notes' => $incident['lesson_text'],
+        ]);
+    }
+
+    public function resolveIncident(int $userId, string $incidentKey): void
+    {
+        $incident = $this->incidentEvent($userId, $incidentKey);
+
+        if ($incident['status'] !== 'active') {
+            throw new ApiException('INCIDENT_NOT_ACTIVE', 409, 'Only active incident drills can be resolved.');
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT status, verification_status
+             FROM corrective_actions
+             WHERE user_id = :user_id AND action_key = :action_key
+             LIMIT 1'
+        );
+        $statement->execute([
+            'user_id' => $userId,
+            'action_key' => 'incident_' . $incidentKey,
+        ]);
+        $action = $statement->fetch();
+
+        if (!is_array($action) || $action['status'] !== 'verified' || $action['verification_status'] !== 'effective') {
+            throw new ApiException('CORRECTIVE_ACTION_NOT_VERIFIED', 409, 'Verify the corrective action as effective before resolving the incident drill.');
+        }
+
+        $update = $this->pdo->prepare(
+            'UPDATE incident_events
+             SET status = "resolved", resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+             WHERE user_id = :user_id AND incident_key = :incident_key'
+        );
+        $update->execute(['user_id' => $userId, 'incident_key' => $incidentKey]);
+    }
+
+    /**
+     * @param array<string,mixed> $fields
+     */
+    public function updateCorrectiveAction(int $userId, string $actionKey, array $fields): void
+    {
+        $this->updateKnownFields(
+            'corrective_actions',
+            'action_key',
+            $actionKey,
+            $userId,
+            $fields,
+            ['status', 'verification_status', 'owner', 'notes']
+        );
+
+        if (($fields['status'] ?? null) === 'verified') {
+            $statement = $this->pdo->prepare(
+                'UPDATE corrective_actions
+                 SET closed_at = COALESCE(closed_at, CURRENT_TIMESTAMP)
+                 WHERE user_id = :user_id AND action_key = :action_key'
+            );
+            $statement->execute(['user_id' => $userId, 'action_key' => $actionKey]);
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $action
+     */
+    public function createCorrectiveAction(int $userId, array $action): void
+    {
+        $statement = $this->pdo->prepare(
+            'INSERT IGNORE INTO corrective_actions
+                (user_id, action_key, source_type, source_key, object_key, title, owner, due_days, status, verification_status, notes)
+             VALUES
+                (:user_id, :action_key, :source_type, :source_key, :object_key, :title, :owner, :due_days, :status, :verification_status, :notes)'
+        );
+        $statement->execute([
+            'user_id' => $userId,
+            'action_key' => $action['action_key'],
+            'source_type' => $action['source_type'],
+            'source_key' => $action['source_key'],
+            'object_key' => $action['object_key'] ?? null,
+            'title' => $action['title'],
+            'owner' => $action['owner'],
+            'due_days' => $action['due_days'] ?? 14,
+            'status' => $action['status'] ?? 'open',
+            'verification_status' => $action['verification_status'] ?? 'not_checked',
+            'notes' => $action['notes'] ?? '',
+        ]);
+    }
+
+    /**
+     * @param array<string,mixed> $report
+     */
+    public function saveInternalAuditReport(int $userId, array $report): int
+    {
+        $statement = $this->pdo->prepare(
+            'INSERT INTO internal_audit_reports (user_id, scope, status, score_json, findings_json, corrective_actions_created)
+             VALUES (:user_id, :scope, :status, :score_json, :findings_json, :corrective_actions_created)'
+        );
+        $statement->execute([
+            'user_id' => $userId,
+            'scope' => $report['scope'],
+            'status' => $report['status'],
+            'score_json' => $this->encodeJson($report['score']),
+            'findings_json' => $this->encodeJson($report['findings']),
+            'corrective_actions_created' => $report['corrective_actions_created'],
+        ]);
+
+        return (int) $this->pdo->lastInsertId();
+    }
+
+    /**
+     * @return array<string,mixed>|null
+     */
+    public function latestInternalAuditReport(int $userId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, scope, status, score_json, findings_json, corrective_actions_created, created_at
+             FROM internal_audit_reports
+             WHERE user_id = :user_id
+             ORDER BY id DESC
+             LIMIT 1'
+        );
+        $statement->execute(['user_id' => $userId]);
+        $record = $statement->fetch();
+
+        if (!is_array($record)) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $record['id'],
+            'scope' => (string) $record['scope'],
+            'status' => (string) $record['status'],
+            'score' => $this->decodeJson((string) $record['score_json']),
+            'findings' => $this->decodeJson((string) $record['findings_json']),
+            'corrective_actions_created' => (int) $record['corrective_actions_created'],
+            'created_at' => (string) $record['created_at'],
+        ];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function incidentEvent(int $userId, string $incidentKey): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT incident_key, object_key, title, status, lesson_text
+             FROM incident_events
+             WHERE user_id = :user_id AND incident_key = :incident_key
+             LIMIT 1'
+        );
+        $statement->execute(['user_id' => $userId, 'incident_key' => $incidentKey]);
+        $record = $statement->fetch();
+
+        if (!is_array($record)) {
+            throw new ApiException('INCIDENT_NOT_FOUND', 404, 'The selected incident drill does not exist.');
+        }
+
+        return [
+            'incident_key' => (string) $record['incident_key'],
+            'object_key' => (string) $record['object_key'],
+            'title' => (string) $record['title'],
+            'status' => (string) $record['status'],
+            'lesson_text' => (string) $record['lesson_text'],
+        ];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    private function incidentDefinition(string $incidentKey): array
+    {
+        foreach (GameCatalog::incidentDrills() as $definition) {
+            if ($definition['incident_key'] === $incidentKey) {
+                return $definition;
+            }
+        }
+
+        return [];
     }
 
     /**

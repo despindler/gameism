@@ -111,6 +111,30 @@
             <div id="isms-body" class="isms-body"></div>
         </section>
 
+        <section class="teaching-panel" aria-label="Teaching loop">
+            <header class="panel-heading">
+                <div>
+                    <h2>Teaching Loop</h2>
+                    <p id="teaching-score-summary" class="asset-type"></p>
+                </div>
+                <button id="run-internal-audit" type="button">Internal audit</button>
+            </header>
+            <div class="teaching-grid">
+                <section>
+                    <h3>Incident Drills</h3>
+                    <div id="incident-list" class="teaching-list"></div>
+                </section>
+                <section>
+                    <h3>Corrective Actions</h3>
+                    <div id="corrective-action-list" class="teaching-list"></div>
+                </section>
+                <section>
+                    <h3>Internal Audit</h3>
+                    <div id="internal-audit-summary" class="teaching-list"></div>
+                </section>
+            </div>
+        </section>
+
         <section id="audit-panel" class="audit-panel" hidden></section>
     </main>
 

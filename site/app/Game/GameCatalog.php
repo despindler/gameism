@@ -656,6 +656,57 @@ final class GameCatalog
     }
 
     /**
+     * @return list<array<string,mixed>>
+     */
+    public static function incidentDrills(): array
+    {
+        return [
+            [
+                'incident_key' => 'phishing_ehr_password',
+                'object_key' => 'ehr_cloud',
+                'title' => 'Phishing attempt against EHR access',
+                'description' => 'A receptionist reports an email asking them to confirm their Cloud EHR password on a lookalike page.',
+                'severity' => 'major',
+                'status' => 'available',
+                'trigger_text' => 'Start the phishing drill and decide what evidence and corrective action are needed.',
+                'lesson_text' => 'The office needs MFA, staff reporting behavior, access review evidence, and a clear incident route.',
+                'required_controls' => ['mfa_enabled', 'access_review', 'incident_procedure'],
+                'required_evidence' => ['ehr_access_review', 'incident_procedure_record'],
+                'corrective_action_title' => 'Close phishing drill gaps for EHR access',
+                'owner' => 'Practice Manager',
+            ],
+            [
+                'incident_key' => 'lost_nurse_laptop',
+                'object_key' => 'nurse_laptop',
+                'title' => 'Lost nurse laptop',
+                'description' => 'A nurse cannot find a laptop after a home visit and the practice must judge exposure and recovery steps.',
+                'severity' => 'major',
+                'status' => 'available',
+                'trigger_text' => 'Start the lost-device drill and verify whether the practice can prove containment.',
+                'lesson_text' => 'Portable endpoint incidents need encryption evidence, inventory ownership, and defined reporting.',
+                'required_controls' => ['disk_encryption', 'screen_lock', 'asset_inventory', 'incident_procedure'],
+                'required_evidence' => ['asset_inventory_export', 'incident_procedure_record'],
+                'corrective_action_title' => 'Prove containment for lost clinical endpoint',
+                'owner' => 'IT Support',
+            ],
+            [
+                'incident_key' => 'backup_restore_failure',
+                'object_key' => 'backup_nas',
+                'title' => 'Backup restore failure',
+                'description' => 'A restore test fails because the backup job ran but the recovery procedure was never verified.',
+                'severity' => 'major',
+                'status' => 'available',
+                'trigger_text' => 'Start the recovery drill and decide what must be corrected before audit.',
+                'lesson_text' => 'Resilience depends on restore evidence, not only backup configuration.',
+                'required_controls' => ['backup_schedule', 'encrypted_backup', 'restore_test', 'offline_or_immutable_copy'],
+                'required_evidence' => ['backup_restore_test', 'risk_register_review'],
+                'corrective_action_title' => 'Make backup recovery evidence audit-ready',
+                'owner' => 'IT Support',
+            ],
+        ];
+    }
+
+    /**
      * @return array<string,mixed>
      */
     public static function scenario(): array

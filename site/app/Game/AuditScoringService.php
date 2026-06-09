@@ -9,9 +9,10 @@ final class AuditScoringService
     /**
      * @param list<array<string,mixed>> $objects
      * @param array<string,list<array<string,mixed>>> $isms
+     * @param array<string,mixed> $teaching
      * @return array<string,mixed>
      */
-    public function evaluate(array $objects, array $isms = []): array
+    public function evaluate(array $objects, array $isms = [], array $teaching = []): array
     {
         $catalog = GameCatalog::controls();
         $totals = ['security' => 0, 'documentation' => 0, 'resilience' => 0, 'audit' => 0];
@@ -67,6 +68,7 @@ final class AuditScoringService
         }
 
         $artifactScore = $this->evaluateArtifacts($isms, $totals, $earned, $findings);
+        $teachingScore = $this->evaluateTeaching($teaching, $totals, $earned, $findings);
 
         $categories = [];
         $totalEarned = 0;
@@ -99,6 +101,7 @@ final class AuditScoringService
                 ],
                 'categories' => $categories,
                 'artifacts' => $artifactScore,
+                'teaching' => $teachingScore,
             ],
             'findings' => $findings,
             'object_scores' => $objectScores,
@@ -198,6 +201,90 @@ final class AuditScoringService
         }
 
         return $artifactTotals;
+    }
+
+    /**
+     * @param array<string,mixed> $teaching
+     * @param array<string,int> $totals
+     * @param array<string,int> $earned
+     * @param list<array<string,mixed>> $findings
+     * @return array<string,mixed>
+     */
+    private function evaluateTeaching(array $teaching, array &$totals, array &$earned, array &$findings): array
+    {
+        $score = [
+            'incidents' => ['earned' => 0, 'total' => 0, 'percent' => 100],
+            'corrective_actions' => ['earned' => 0, 'total' => 0, 'percent' => 100],
+        ];
+
+        foreach ($teaching['incidents'] ?? [] as $incident) {
+            if ($incident['status'] === 'available') {
+                continue;
+            }
+
+            $weights = ['resilience' => 2, 'audit' => 1];
+            $points = $incident['status'] === 'resolved' ? 3 : 0;
+            $this->applyArtifactPoints($weights, 3, $points, $totals, $earned, $score['incidents']);
+
+            if ($incident['status'] === 'active') {
+                $findings[] = [
+                    'object_key' => $incident['object_key'],
+                    'object_name' => $incident['title'],
+                    'object_type' => 'incident',
+                    'control_key' => 'incident_' . $incident['incident_key'],
+                    'control_label' => 'Incident response',
+                    'severity' => $incident['severity'] === 'major' ? 'major' : 'minor',
+                    'title' => 'Incident drill is active and unresolved.',
+                    'recommendation' => 'Complete and verify the linked corrective action before closing the drill.',
+                    'primary_category' => 'resilience',
+                ];
+            }
+        }
+
+        foreach ($teaching['corrective_actions'] ?? [] as $action) {
+            $weights = ['documentation' => 1, 'resilience' => 1, 'audit' => 2];
+            $points = $this->statusPoints((string) $action['status'], [
+                'open' => 0,
+                'in_progress' => 1,
+                'done' => 2,
+                'verified' => 4,
+            ]);
+            $this->applyArtifactPoints($weights, 4, $points, $totals, $earned, $score['corrective_actions']);
+
+            if ($points < 4) {
+                $findings[] = [
+                    'object_key' => $action['object_key'],
+                    'object_name' => $action['title'],
+                    'object_type' => 'corrective_action',
+                    'control_key' => 'corrective_action_' . $action['action_key'],
+                    'control_label' => 'Corrective action',
+                    'severity' => $action['source_type'] === 'incident' ? 'major' : 'minor',
+                    'title' => 'Corrective action is not verified.',
+                    'recommendation' => 'Track the action through completion and verify effectiveness.',
+                    'primary_category' => 'audit',
+                ];
+            } elseif ($action['verification_status'] !== 'effective') {
+                $findings[] = [
+                    'object_key' => $action['object_key'],
+                    'object_name' => $action['title'],
+                    'object_type' => 'corrective_action',
+                    'control_key' => 'corrective_action_effectiveness_' . $action['action_key'],
+                    'control_label' => 'Effectiveness check',
+                    'severity' => 'minor',
+                    'title' => 'Corrective action lacks an effective verification result.',
+                    'recommendation' => 'Record whether the corrective action was effective after implementation.',
+                    'primary_category' => 'audit',
+                ];
+            }
+        }
+
+        foreach ($score as $key => $value) {
+            $score[$key]['percent'] = $value['total'] > 0
+                ? (int) round(($value['earned'] / $value['total']) * 100)
+                : 100;
+        }
+
+        return $score;
     }
 
     /**

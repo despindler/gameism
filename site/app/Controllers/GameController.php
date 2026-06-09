@@ -70,6 +70,70 @@ final class GameController
     /**
      * @return array<string,mixed>
      */
+    public function startIncident(Request $request): array
+    {
+        $user = $this->auth->requireUser();
+
+        return [
+            'ok' => true,
+            'game_state' => $this->game->startIncident(
+                $user,
+                $request->string('incident_key')
+            ),
+        ];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function resolveIncident(Request $request): array
+    {
+        $user = $this->auth->requireUser();
+
+        return [
+            'ok' => true,
+            'game_state' => $this->game->resolveIncident(
+                $user,
+                $request->string('incident_key')
+            ),
+        ];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function updateCorrectiveAction(Request $request): array
+    {
+        $user = $this->auth->requireUser();
+
+        return [
+            'ok' => true,
+            'game_state' => $this->game->updateCorrectiveAction(
+                $user,
+                $request->string('action_key'),
+                $request->object('fields')
+            ),
+        ];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function runInternalAudit(): array
+    {
+        $user = $this->auth->requireUser();
+        $result = $this->game->runInternalAudit($user);
+
+        return [
+            'ok' => true,
+            'report' => $result['report'],
+            'game_state' => $result['game_state'],
+        ];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
     public function runAudit(): array
     {
         $user = $this->auth->requireUser();

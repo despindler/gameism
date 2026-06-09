@@ -53,6 +53,10 @@ final class Application
         $router->add('GET', '/api/game-state', fn () => $gameController->gameState());
         $router->add('POST', '/api/configure-object', fn (Request $request) => $gameController->configureObject($request));
         $router->add('POST', '/api/update-isms-item', fn (Request $request) => $gameController->updateIsmsItem($request));
+        $router->add('POST', '/api/start-incident', fn (Request $request) => $gameController->startIncident($request));
+        $router->add('POST', '/api/resolve-incident', fn (Request $request) => $gameController->resolveIncident($request));
+        $router->add('POST', '/api/update-corrective-action', fn (Request $request) => $gameController->updateCorrectiveAction($request));
+        $router->add('POST', '/api/run-internal-audit', fn () => $gameController->runInternalAudit());
         $router->add('POST', '/api/run-audit', fn () => $gameController->runAudit());
 
         return new self($config, $router);

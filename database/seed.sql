@@ -9,7 +9,9 @@ VALUES
     ('game.registration.first_user_admin', 'true', 'boolean'),
     ('game.isms.asset_verified_weight', '3', 'integer'),
     ('game.isms.risk_treated_weight', '5', 'integer'),
-    ('game.isms.evidence_ready_weight', '5', 'integer')
+    ('game.isms.evidence_ready_weight', '5', 'integer'),
+    ('game.teaching.max_internal_audit_actions', '3', 'integer'),
+    ('game.teaching.corrective_action_due_days', '14', 'integer')
 ON DUPLICATE KEY UPDATE
     setting_value = VALUES(setting_value),
     value_type = VALUES(value_type),

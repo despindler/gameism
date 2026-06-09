@@ -37,6 +37,8 @@ assertTrue(count($initial['map']['objects']) === 10, 'initial office has ten int
 assertTrue(count($initial['isms']['assets']) === 8, 'initial ISMS inventory has eight assets');
 assertTrue(count($initial['isms']['risks']) === 6, 'initial risk register has six risks');
 assertTrue(count($initial['isms']['evidence']) === 8, 'initial evidence checklist has eight items');
+assertTrue(count($initial['teaching']['incidents']) === 3, 'initial scenario has three incident drills');
+assertTrue(count($initial['teaching']['corrective_actions']) === 0, 'initial scenario has no corrective actions');
 assertTrue($initial['score']['overall']['percent'] < 60, 'initial scenario starts with visible gaps');
 
 $before = $initial['score']['overall']['percent'];
@@ -72,6 +74,44 @@ try {
 }
 assertTrue($invalidStatusRejected, 'invalid evidence status is rejected with a stable error code');
 
+$incidentStarted = $game->startIncident($user, 'backup_restore_failure');
+assertTrue($incidentStarted['teaching']['incidents'][0]['status'] === 'active', 'starting an incident marks it active');
+assertTrue(count($incidentStarted['teaching']['corrective_actions']) === 1, 'starting an incident creates a corrective action');
+
+$unverifiedResolutionRejected = false;
+try {
+    $game->resolveIncident($user, 'backup_restore_failure');
+} catch (ApiException $exception) {
+    $unverifiedResolutionRejected = $exception->apiCode() === 'CORRECTIVE_ACTION_NOT_VERIFIED';
+}
+assertTrue($unverifiedResolutionRejected, 'incident cannot be resolved before corrective action verification');
+
+$correctiveUpdated = $game->updateCorrectiveAction($user, 'incident_backup_restore_failure', [
+    'status' => 'verified',
+    'verification_status' => 'effective',
+]);
+assertTrue($correctiveUpdated['teaching']['corrective_actions'][0]['status'] === 'verified', 'corrective action can be verified');
+
+$incidentResolved = $game->resolveIncident($user, 'backup_restore_failure');
+$resolvedIncident = array_values(array_filter(
+    $incidentResolved['teaching']['incidents'],
+    static fn (array $incident): bool => $incident['incident_key'] === 'backup_restore_failure'
+))[0];
+assertTrue($resolvedIncident['status'] === 'resolved', 'verified corrective action allows incident resolution');
+
+$invalidActionStatusRejected = false;
+try {
+    $game->updateCorrectiveAction($user, 'incident_backup_restore_failure', ['status' => 'closed']);
+} catch (ApiException $exception) {
+    $invalidActionStatusRejected = $exception->apiCode() === 'INVALID_CORRECTIVE_ACTION_STATUS';
+}
+assertTrue($invalidActionStatusRejected, 'invalid corrective action status is rejected with a stable error code');
+
+$internalAudit = $game->runInternalAudit($user);
+assertTrue(isset($internalAudit['report']['status']), 'internal audit report includes a status');
+assertTrue(isset($internalAudit['game_state']['teaching']['latest_internal_audit']), 'latest internal audit is persisted');
+assertTrue(count($internalAudit['game_state']['teaching']['corrective_actions']) >= 1, 'internal audit keeps or creates corrective actions');
+
 $invalidControlRejected = false;
 try {
     $game->configureObject($user, 'isms_binder', ['not_a_control' => true]);
@@ -89,7 +129,7 @@ echo "OK: smoke tests passed.\n";
 function resetDatabase(PDO $pdo, string $root): void
 {
     $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
-    foreach (['evidence_items', 'risk_register_items', 'asset_inventory_items', 'audit_reports', 'office_objects', 'player_states', 'app_settings', 'users'] as $table) {
+    foreach (['internal_audit_reports', 'corrective_actions', 'incident_events', 'evidence_items', 'risk_register_items', 'asset_inventory_items', 'audit_reports', 'office_objects', 'player_states', 'app_settings', 'users'] as $table) {
         $pdo->exec('DROP TABLE IF EXISTS ' . $table);
     }
     $pdo->exec('SET FOREIGN_KEY_CHECKS=1');

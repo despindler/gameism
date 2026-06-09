@@ -247,6 +247,7 @@ label {
 .asset-details,
 .findings-panel,
 .isms-panel,
+.teaching-panel,
 .audit-panel {
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -482,6 +483,65 @@ label {
     grid-column: 1 / -1;
 }
 
+.teaching-panel {
+    margin: 0 16px 16px;
+    overflow: hidden;
+}
+
+.teaching-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(240px, 1fr));
+    gap: 12px;
+    padding: 14px 16px 16px;
+}
+
+.teaching-grid h3 {
+    margin: 0 0 10px;
+    font-size: 0.96rem;
+}
+
+.teaching-list {
+    display: grid;
+    gap: 10px;
+}
+
+.teaching-card {
+    display: grid;
+    gap: 9px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-2);
+}
+
+.teaching-card header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: start;
+}
+
+.teaching-card h4 {
+    margin: 0;
+    font-size: 0.94rem;
+}
+
+.teaching-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.teaching-actions button {
+    min-height: 34px;
+    padding: 6px 10px;
+}
+
+.compact-form {
+    display: grid;
+    gap: 8px;
+}
+
 .audit-panel {
     margin: 0 16px 16px;
     padding: 16px;
@@ -561,6 +621,10 @@ label {
 
     .isms-body {
         grid-template-columns: repeat(2, minmax(220px, 1fr));
+    }
+
+    .teaching-grid {
+        grid-template-columns: 1fr;
     }
 }
 
