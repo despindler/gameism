@@ -52,6 +52,24 @@ final class GameController
     /**
      * @return array<string,mixed>
      */
+    public function updateIsmsItem(Request $request): array
+    {
+        $user = $this->auth->requireUser();
+
+        return [
+            'ok' => true,
+            'game_state' => $this->game->updateIsmsItem(
+                $user,
+                $request->string('item_type'),
+                $request->string('item_key'),
+                $request->object('fields')
+            ),
+        ];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
     public function runAudit(): array
     {
         $user = $this->auth->requireUser();
@@ -64,4 +82,3 @@ final class GameController
         ];
     }
 }
-

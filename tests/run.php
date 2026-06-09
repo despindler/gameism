@@ -34,6 +34,9 @@ assertTrue($user['role'] === 'admin', 'first registered user becomes admin');
 
 $initial = $game->stateForUser($user);
 assertTrue(count($initial['map']['objects']) === 10, 'initial office has ten interactive objects');
+assertTrue(count($initial['isms']['assets']) === 8, 'initial ISMS inventory has eight assets');
+assertTrue(count($initial['isms']['risks']) === 6, 'initial risk register has six risks');
+assertTrue(count($initial['isms']['evidence']) === 8, 'initial evidence checklist has eight items');
 assertTrue($initial['score']['overall']['percent'] < 60, 'initial scenario starts with visible gaps');
 
 $before = $initial['score']['overall']['percent'];
@@ -43,6 +46,31 @@ $updated = $game->configureObject($user, 'isms_binder', [
     'soa_prepared' => true,
 ]);
 assertTrue($updated['score']['overall']['percent'] > $before, 'configuring controls improves score');
+
+$documented = $game->updateIsmsItem($user, 'asset', 'patient_records', [
+    'status' => 'verified',
+    'owner' => 'Practice Manager',
+]);
+assertTrue($documented['score']['artifacts']['assets']['percent'] > $initial['score']['artifacts']['assets']['percent'], 'verifying inventory improves artifact score');
+
+$treated = $game->updateIsmsItem($user, 'risk', 'ransomware_recovery_failure', [
+    'treatment_status' => 'treated',
+    'likelihood' => 2,
+]);
+assertTrue($treated['score']['artifacts']['risks']['percent'] > $initial['score']['artifacts']['risks']['percent'], 'treating risk improves artifact score');
+
+$evidenceReady = $game->updateIsmsItem($user, 'evidence', 'backup_restore_test', [
+    'status' => 'ready',
+]);
+assertTrue($evidenceReady['score']['artifacts']['evidence']['percent'] > $initial['score']['artifacts']['evidence']['percent'], 'ready evidence improves artifact score');
+
+$invalidStatusRejected = false;
+try {
+    $game->updateIsmsItem($user, 'evidence', 'backup_restore_test', ['status' => 'finished']);
+} catch (ApiException $exception) {
+    $invalidStatusRejected = $exception->apiCode() === 'INVALID_EVIDENCE_STATUS';
+}
+assertTrue($invalidStatusRejected, 'invalid evidence status is rejected with a stable error code');
 
 $invalidControlRejected = false;
 try {
@@ -61,7 +89,7 @@ echo "OK: smoke tests passed.\n";
 function resetDatabase(PDO $pdo, string $root): void
 {
     $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
-    foreach (['audit_reports', 'office_objects', 'player_states', 'app_settings', 'users'] as $table) {
+    foreach (['evidence_items', 'risk_register_items', 'asset_inventory_items', 'audit_reports', 'office_objects', 'player_states', 'app_settings', 'users'] as $table) {
         $pdo->exec('DROP TABLE IF EXISTS ' . $table);
     }
     $pdo->exec('SET FOREIGN_KEY_CHECKS=1');
@@ -90,4 +118,3 @@ function assertTrue(bool $condition, string $message): void
         throw new RuntimeException('Assertion failed: ' . $message);
     }
 }
-

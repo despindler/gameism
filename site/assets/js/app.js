@@ -10,6 +10,7 @@
         transform: null,
         busy: false,
         lastReport: null,
+        activeIsmsTab: 'assets',
     };
 
     const els = {
@@ -29,6 +30,9 @@
         canvas: document.getElementById('office-canvas'),
         assetDetails: document.getElementById('asset-details'),
         findingsList: document.getElementById('findings-list'),
+        ismsTabs: document.getElementById('isms-tabs'),
+        ismsBody: document.getElementById('isms-body'),
+        ismsScoreSummary: document.getElementById('isms-score-summary'),
         auditPanel: document.getElementById('audit-panel'),
         toast: document.getElementById('toast'),
     };
@@ -111,6 +115,7 @@
         drawOffice();
         renderDetails();
         renderFindings();
+        renderIsmsPanel();
     }
 
     function renderHud() {
@@ -375,9 +380,192 @@
         els.findingsList.innerHTML = findings.map((finding) => `
             <article class="finding-item">
                 <div class="finding-title">${escapeHtml(finding.title)}</div>
-                <div class="finding-meta">${escapeHtml(finding.object_name)} · ${escapeHtml(finding.severity)}</div>
+                <div class="finding-meta">${escapeHtml(finding.object_name)} - ${escapeHtml(finding.severity)}</div>
             </article>
         `).join('');
+    }
+
+    function renderIsmsPanel() {
+        const artifacts = state.game.isms;
+        const scores = state.game.score.artifacts;
+        els.ismsScoreSummary.textContent = `Inventory ${scores.assets.percent}% - Risks ${scores.risks.percent}% - Evidence ${scores.evidence.percent}%`;
+
+        for (const button of els.ismsTabs.querySelectorAll('[data-isms-tab]')) {
+            button.classList.toggle('active', button.dataset.ismsTab === state.activeIsmsTab);
+        }
+
+        if (state.activeIsmsTab === 'assets') {
+            els.ismsBody.innerHTML = artifacts.assets.map(renderAssetArtifact).join('');
+        } else if (state.activeIsmsTab === 'risks') {
+            els.ismsBody.innerHTML = artifacts.risks.map(renderRiskArtifact).join('');
+        } else {
+            els.ismsBody.innerHTML = artifacts.evidence.map(renderEvidenceArtifact).join('');
+        }
+
+        bindIsmsControls();
+    }
+
+    function renderAssetArtifact(asset) {
+        return `
+            <article class="artifact-card">
+                <header>
+                    <h3>${escapeHtml(asset.name)}</h3>
+                    <div class="artifact-meta">${escapeHtml(typeLabel(asset.asset_type))} - ${escapeHtml(asset.information_classification)}</div>
+                </header>
+                <div class="artifact-grid">
+                    ${selectControl('asset', asset.asset_key, 'status', asset.status, [
+                        ['draft', 'Draft'],
+                        ['verified', 'Verified'],
+                    ])}
+                    ${selectControl('asset', asset.asset_key, 'criticality', asset.criticality, [
+                        ['low', 'Low'],
+                        ['medium', 'Medium'],
+                        ['high', 'High'],
+                    ])}
+                    ${textInputControl('asset', asset.asset_key, 'owner', asset.owner, 'Owner', 'wide')}
+                    ${textareaControl('asset', asset.asset_key, 'notes', asset.notes, 'Notes', 'wide')}
+                </div>
+            </article>
+        `;
+    }
+
+    function renderRiskArtifact(risk) {
+        return `
+            <article class="artifact-card">
+                <header>
+                    <h3>${escapeHtml(risk.title)}</h3>
+                    <div class="artifact-meta">Inherent score ${risk.inherent_score} - linked to ${escapeHtml(shortObjectName(risk.object_key))}</div>
+                </header>
+                <div class="artifact-grid">
+                    ${selectControl('risk', risk.risk_key, 'likelihood', String(risk.likelihood), scoreOptions())}
+                    ${selectControl('risk', risk.risk_key, 'impact', String(risk.impact), scoreOptions())}
+                    ${selectControl('risk', risk.risk_key, 'treatment_status', risk.treatment_status, [
+                        ['identified', 'Identified'],
+                        ['assessed', 'Assessed'],
+                        ['treated', 'Treated'],
+                        ['accepted', 'Accepted'],
+                    ], 'wide')}
+                    ${textInputControl('risk', risk.risk_key, 'owner', risk.owner, 'Owner', 'wide')}
+                    ${textareaControl('risk', risk.risk_key, 'treatment_summary', risk.treatment_summary, 'Treatment summary', 'wide')}
+                </div>
+            </article>
+        `;
+    }
+
+    function renderEvidenceArtifact(evidence) {
+        return `
+            <article class="artifact-card">
+                <header>
+                    <h3>${escapeHtml(evidence.title)}</h3>
+                    <div class="artifact-meta">${escapeHtml(typeLabel(evidence.evidence_type))} - linked to ${escapeHtml(shortObjectName(evidence.object_key))}</div>
+                </header>
+                <p class="control-description">${escapeHtml(evidence.expected_evidence)}</p>
+                <div class="artifact-grid">
+                    ${selectControl('evidence', evidence.evidence_key, 'status', evidence.status, [
+                        ['missing', 'Missing'],
+                        ['draft', 'Draft'],
+                        ['ready', 'Ready'],
+                        ['reviewed', 'Reviewed'],
+                    ], 'wide')}
+                    ${textInputControl('evidence', evidence.evidence_key, 'owner', evidence.owner, 'Owner', 'wide')}
+                    ${textareaControl('evidence', evidence.evidence_key, 'notes', evidence.notes, 'Notes', 'wide')}
+                </div>
+            </article>
+        `;
+    }
+
+    function selectControl(type, key, field, value, options, className = '') {
+        const optionHtml = options.map(([optionValue, label]) => `
+            <option value="${escapeAttr(optionValue)}" ${String(value) === String(optionValue) ? 'selected' : ''}>${escapeHtml(label)}</option>
+        `).join('');
+
+        return `
+            <label class="${escapeAttr(className)}">
+                ${escapeHtml(fieldLabel(field))}
+                <select data-isms-type="${escapeAttr(type)}" data-isms-key="${escapeAttr(key)}" data-field="${escapeAttr(field)}" ${state.busy ? 'disabled' : ''}>
+                    ${optionHtml}
+                </select>
+            </label>
+        `;
+    }
+
+    function textInputControl(type, key, field, value, label, className = '') {
+        return `
+            <label class="${escapeAttr(className)}">
+                ${escapeHtml(label)}
+                <input value="${escapeAttr(value)}" data-initial="${escapeAttr(value)}" data-isms-type="${escapeAttr(type)}" data-isms-key="${escapeAttr(key)}" data-field="${escapeAttr(field)}" ${state.busy ? 'disabled' : ''}>
+            </label>
+        `;
+    }
+
+    function textareaControl(type, key, field, value, label, className = '') {
+        return `
+            <label class="${escapeAttr(className)}">
+                ${escapeHtml(label)}
+                <textarea data-initial="${escapeAttr(value)}" data-isms-type="${escapeAttr(type)}" data-isms-key="${escapeAttr(key)}" data-field="${escapeAttr(field)}" ${state.busy ? 'disabled' : ''}>${escapeHtml(value)}</textarea>
+            </label>
+        `;
+    }
+
+    function scoreOptions() {
+        return [
+            ['1', '1'],
+            ['2', '2'],
+            ['3', '3'],
+            ['4', '4'],
+            ['5', '5'],
+        ];
+    }
+
+    function bindIsmsControls() {
+        for (const select of els.ismsBody.querySelectorAll('select[data-isms-type]')) {
+            select.addEventListener('change', () => {
+                updateIsmsField(select.dataset.ismsType, select.dataset.ismsKey, select.dataset.field, select.value);
+            });
+        }
+
+        for (const input of els.ismsBody.querySelectorAll('input[data-isms-type], textarea[data-isms-type]')) {
+            input.addEventListener('blur', () => {
+                if (input.value !== input.dataset.initial) {
+                    updateIsmsField(input.dataset.ismsType, input.dataset.ismsKey, input.dataset.field, input.value);
+                }
+            });
+
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' && input.tagName === 'INPUT') {
+                    input.blur();
+                }
+            });
+        }
+    }
+
+    async function updateIsmsField(itemType, itemKey, field, value) {
+        if (state.busy) {
+            return;
+        }
+
+        state.busy = true;
+        renderIsmsPanel();
+
+        try {
+            const payload = await api('update-isms-item', {
+                method: 'POST',
+                body: {
+                    item_type: itemType,
+                    item_key: itemKey,
+                    fields: {
+                        [field]: value,
+                    },
+                },
+            });
+            state.game = payload.game_state;
+            showToast('ISMS item updated.');
+        } catch (error) {
+            showToast(error.message);
+        } finally {
+            state.busy = false;
+            render();
+        }
     }
 
     async function updateControl(objectKey, controlKey, enabled) {
@@ -447,7 +635,7 @@
                     ${report.sampled_findings.map((finding) => `
                         <article class="finding-item">
                             <div class="finding-title">${escapeHtml(finding.title)}</div>
-                            <div class="finding-meta">${escapeHtml(finding.object_name)} · ${escapeHtml(finding.recommendation)}</div>
+                            <div class="finding-meta">${escapeHtml(finding.object_name)} - ${escapeHtml(finding.recommendation)}</div>
                         </article>
                     `).join('')}
                 </div>
@@ -465,6 +653,20 @@
 
     function typeLabel(type) {
         return String(type).replace(/_/g, ' ');
+    }
+
+    function fieldLabel(field) {
+        return String(field).replace(/_/g, ' ');
+    }
+
+    function shortObjectName(objectKey) {
+        if (!state.game) {
+            return objectKey || 'scenario';
+        }
+
+        const object = state.game.map.objects.find((item) => item.object_key === objectKey);
+
+        return object ? object.display_name : objectKey || 'scenario';
     }
 
     function stateLabel(value) {
@@ -553,6 +755,17 @@
 
     els.runAudit.addEventListener('click', runAudit);
 
+    els.ismsTabs.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-isms-tab]');
+
+        if (!button) {
+            return;
+        }
+
+        state.activeIsmsTab = button.dataset.ismsTab;
+        renderIsmsPanel();
+    });
+
     els.canvas.addEventListener('click', (event) => {
         const rect = els.canvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
@@ -568,4 +781,3 @@
     window.addEventListener('resize', resizeCanvas);
     bootstrap();
 })();
-

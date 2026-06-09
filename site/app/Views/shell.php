@@ -96,10 +96,24 @@
             </aside>
         </section>
 
+        <section class="isms-panel" aria-label="ISMS artifacts">
+            <header class="panel-heading">
+                <div>
+                    <h2>ISMS Workbench</h2>
+                    <p id="isms-score-summary" class="asset-type"></p>
+                </div>
+                <div id="isms-tabs" class="isms-tabs" role="tablist" aria-label="ISMS artifact views">
+                    <button type="button" data-isms-tab="assets">Inventory</button>
+                    <button type="button" data-isms-tab="risks">Risks</button>
+                    <button type="button" data-isms-tab="evidence">Evidence</button>
+                </div>
+            </header>
+            <div id="isms-body" class="isms-body"></div>
+        </section>
+
         <section id="audit-panel" class="audit-panel" hidden></section>
     </main>
 
     <script src="assets/js/app.js?v=<?= $version ?>" defer></script>
 </body>
 </html>
-

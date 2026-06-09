@@ -401,6 +401,261 @@ final class GameCatalog
     }
 
     /**
+     * @return list<array<string,mixed>>
+     */
+    public static function assetInventoryItems(): array
+    {
+        return [
+            [
+                'asset_key' => 'patient_records',
+                'object_key' => 'records_cabinet',
+                'name' => 'Patient records',
+                'asset_type' => 'information',
+                'owner' => 'Practice Manager',
+                'information_classification' => 'confidential',
+                'criticality' => 'high',
+                'status' => 'draft',
+                'notes' => 'Includes paper and exported electronic records used for patient care.',
+            ],
+            [
+                'asset_key' => 'ehr_service',
+                'object_key' => 'ehr_cloud',
+                'name' => 'Cloud EHR service',
+                'asset_type' => 'cloud_service',
+                'owner' => 'Practice Manager',
+                'information_classification' => 'confidential',
+                'criticality' => 'high',
+                'status' => 'draft',
+                'notes' => 'Primary clinical record system and supplier dependency.',
+            ],
+            [
+                'asset_key' => 'reception_workstation',
+                'object_key' => 'reception_pc',
+                'name' => 'Reception workstation',
+                'asset_type' => 'endpoint',
+                'owner' => 'Reception Lead',
+                'information_classification' => 'internal',
+                'criticality' => 'medium',
+                'status' => 'draft',
+                'notes' => 'Used for scheduling, intake, and patient communication.',
+            ],
+            [
+                'asset_key' => 'clinical_workstations',
+                'object_key' => 'doctor_pc',
+                'name' => 'Clinical workstations',
+                'asset_type' => 'endpoint',
+                'owner' => 'Medical Director',
+                'information_classification' => 'confidential',
+                'criticality' => 'high',
+                'status' => 'draft',
+                'notes' => 'Doctor and nurse endpoints used during consultations.',
+            ],
+            [
+                'asset_key' => 'network_infrastructure',
+                'object_key' => 'network_router',
+                'name' => 'Router and wireless network',
+                'asset_type' => 'network',
+                'owner' => 'IT Support',
+                'information_classification' => 'internal',
+                'criticality' => 'high',
+                'status' => 'draft',
+                'notes' => 'Provides connectivity for clinical and administrative systems.',
+            ],
+            [
+                'asset_key' => 'backup_repository',
+                'object_key' => 'backup_nas',
+                'name' => 'Backup repository',
+                'asset_type' => 'backup',
+                'owner' => 'IT Support',
+                'information_classification' => 'confidential',
+                'criticality' => 'high',
+                'status' => 'draft',
+                'notes' => 'Stores recoverable copies of critical records and configuration.',
+            ],
+            [
+                'asset_key' => 'printing_workflow',
+                'object_key' => 'printer',
+                'name' => 'Printing workflow',
+                'asset_type' => 'process',
+                'owner' => 'Reception Lead',
+                'information_classification' => 'confidential',
+                'criticality' => 'medium',
+                'status' => 'draft',
+                'notes' => 'Covers printed patient information, collection, and disposal.',
+            ],
+            [
+                'asset_key' => 'isms_documentation',
+                'object_key' => 'isms_binder',
+                'name' => 'ISMS documentation set',
+                'asset_type' => 'documentation',
+                'owner' => 'Practice Manager',
+                'information_classification' => 'internal',
+                'criticality' => 'medium',
+                'status' => 'draft',
+                'notes' => 'Policies, risk decisions, audit records, and improvement evidence.',
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public static function riskRegisterItems(): array
+    {
+        return [
+            [
+                'risk_key' => 'unauthorized_ehr_access',
+                'object_key' => 'ehr_cloud',
+                'title' => 'Unauthorized access to Cloud EHR',
+                'owner' => 'Practice Manager',
+                'likelihood' => 3,
+                'impact' => 5,
+                'treatment_status' => 'identified',
+                'treatment_summary' => 'MFA, access review, supplier commitments, and account lifecycle controls are expected.',
+            ],
+            [
+                'risk_key' => 'lost_clinical_endpoint',
+                'object_key' => 'nurse_laptop',
+                'title' => 'Loss or theft of a clinical endpoint',
+                'owner' => 'IT Support',
+                'likelihood' => 3,
+                'impact' => 4,
+                'treatment_status' => 'identified',
+                'treatment_summary' => 'Disk encryption, screen lock, least privilege, and inventory evidence are expected.',
+            ],
+            [
+                'risk_key' => 'ransomware_recovery_failure',
+                'object_key' => 'backup_nas',
+                'title' => 'Ransomware prevents recovery of patient records',
+                'owner' => 'IT Support',
+                'likelihood' => 3,
+                'impact' => 5,
+                'treatment_status' => 'identified',
+                'treatment_summary' => 'Backups, restore tests, and an offline or immutable copy are expected.',
+            ],
+            [
+                'risk_key' => 'exposed_printouts',
+                'object_key' => 'printer',
+                'title' => 'Patient information exposed through printouts',
+                'owner' => 'Reception Lead',
+                'likelihood' => 4,
+                'impact' => 3,
+                'treatment_status' => 'identified',
+                'treatment_summary' => 'Secure print, supervised collection, and disposal procedure are expected.',
+            ],
+            [
+                'risk_key' => 'network_misconfiguration',
+                'object_key' => 'network_router',
+                'title' => 'Network misconfiguration exposes practice systems',
+                'owner' => 'IT Support',
+                'likelihood' => 3,
+                'impact' => 4,
+                'treatment_status' => 'identified',
+                'treatment_summary' => 'Firmware maintenance, guest isolation, and admin credential control are expected.',
+            ],
+            [
+                'risk_key' => 'audit_evidence_gap',
+                'object_key' => 'isms_binder',
+                'title' => 'Controls cannot be verified during audit',
+                'owner' => 'Practice Manager',
+                'likelihood' => 4,
+                'impact' => 4,
+                'treatment_status' => 'identified',
+                'treatment_summary' => 'Evidence ownership, internal audit records, and management review records are expected.',
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public static function evidenceItems(): array
+    {
+        return [
+            [
+                'evidence_key' => 'asset_inventory_export',
+                'object_key' => 'isms_binder',
+                'title' => 'Current asset inventory',
+                'evidence_type' => 'inventory',
+                'expected_evidence' => 'A dated inventory with owners, classification, criticality, and supporting assets.',
+                'owner' => 'Practice Manager',
+                'status' => 'missing',
+                'notes' => '',
+            ],
+            [
+                'evidence_key' => 'risk_register_review',
+                'object_key' => 'isms_binder',
+                'title' => 'Risk register review record',
+                'evidence_type' => 'risk',
+                'expected_evidence' => 'A risk register showing likelihood, impact, treatment, owner, and review status.',
+                'owner' => 'Practice Manager',
+                'status' => 'missing',
+                'notes' => '',
+            ],
+            [
+                'evidence_key' => 'statement_of_applicability',
+                'object_key' => 'isms_binder',
+                'title' => 'Statement of Applicability baseline',
+                'evidence_type' => 'soa',
+                'expected_evidence' => 'A control applicability record with inclusion, exclusion, and implementation rationale.',
+                'owner' => 'Practice Manager',
+                'status' => 'missing',
+                'notes' => '',
+            ],
+            [
+                'evidence_key' => 'ehr_access_review',
+                'object_key' => 'ehr_cloud',
+                'title' => 'Cloud EHR access review',
+                'evidence_type' => 'access_review',
+                'expected_evidence' => 'A recent review of active EHR users, roles, privileged accounts, and removals.',
+                'owner' => 'Practice Manager',
+                'status' => 'missing',
+                'notes' => '',
+            ],
+            [
+                'evidence_key' => 'supplier_review_ehr',
+                'object_key' => 'ehr_cloud',
+                'title' => 'Cloud EHR supplier review',
+                'evidence_type' => 'supplier',
+                'expected_evidence' => 'Supplier security, continuity, support, and contract evidence for the EHR service.',
+                'owner' => 'Practice Manager',
+                'status' => 'missing',
+                'notes' => '',
+            ],
+            [
+                'evidence_key' => 'backup_restore_test',
+                'object_key' => 'backup_nas',
+                'title' => 'Backup restore test result',
+                'evidence_type' => 'resilience',
+                'expected_evidence' => 'A dated restore test with scope, result, issues, and follow-up actions.',
+                'owner' => 'IT Support',
+                'status' => 'missing',
+                'notes' => '',
+            ],
+            [
+                'evidence_key' => 'incident_procedure_record',
+                'object_key' => 'isms_binder',
+                'title' => 'Incident procedure and reporting route',
+                'evidence_type' => 'procedure',
+                'expected_evidence' => 'A practical incident procedure with reporting, triage, escalation, and lessons learned.',
+                'owner' => 'Practice Manager',
+                'status' => 'missing',
+                'notes' => '',
+            ],
+            [
+                'evidence_key' => 'internal_audit_record',
+                'object_key' => 'isms_binder',
+                'title' => 'Internal audit record',
+                'evidence_type' => 'audit',
+                'expected_evidence' => 'Internal audit scope, observations, findings, corrective actions, and closure status.',
+                'owner' => 'Practice Manager',
+                'status' => 'missing',
+                'notes' => '',
+            ],
+        ];
+    }
+
+    /**
      * @return array<string,mixed>
      */
     public static function scenario(): array
@@ -415,4 +670,3 @@ final class GameCatalog
         ];
     }
 }
-

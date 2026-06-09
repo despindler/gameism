@@ -40,3 +40,43 @@ Next steps:
 - Add richer ISMS artifacts: risk register, Statement of Applicability, evidence records, and corrective actions.
 - Add incident events and auditor mode.
 
+## Milestone 2 - First-Class ISMS Artifacts
+
+Date: 2026-06-09
+
+Goal: Move beyond control toggles by adding explicit ISMS artifacts for asset inventory, risk register, and audit evidence.
+
+What changed:
+
+- Added `asset_inventory_items`, `risk_register_items`, and `evidence_items` tables to `database/schema.sql`.
+- Added seed settings for ISMS scoring weights.
+- Added catalog definitions for the initial physician-office inventory, risks, and evidence checklist.
+- Initialized ISMS artifact rows per user alongside the office objects.
+- Added server-side validation and `POST /api/update-isms-item` for artifact updates.
+- Extended readiness scoring and audit findings to include unverified assets, incomplete risk treatment, and missing or draft evidence.
+- Added an ISMS Workbench to the UI with Inventory, Risks, and Evidence tabs.
+- Updated smoke tests to cover artifact initialization, updates, scoring, and invalid status handling.
+
+How to run:
+
+- Existing deployments should rerun `database/schema.sql`, then `database/seed.sql`.
+- New players receive the current ISMS artifact rows automatically when game state is initialized.
+
+How to verify:
+
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `node --check site/assets/js/app.js`
+- `git diff --check`
+
+Known issues and decisions:
+
+- ISMS artifacts are structured MVP rows, not uploaded documents.
+- The Statement of Applicability is represented as evidence/control readiness for now, not a separate editable matrix.
+- Browser visual verification was limited by in-app browser availability in the current session; HTTP and syntax checks remain available.
+
+Next steps:
+
+- Add corrective actions and incident-driven teaching events.
+- Split the simulated audit into internal audit and certification audit modes.
+- Add admin-tunable scenario and scoring settings.

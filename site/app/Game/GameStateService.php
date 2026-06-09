@@ -27,7 +27,8 @@ final class GameStateService
         $repository = $this->repository();
         $repository->ensureInitialized($user['id']);
         $objects = $repository->objects($user['id']);
-        $evaluation = $this->scoring->evaluate($objects);
+        $isms = $repository->ismsArtifacts($user['id']);
+        $evaluation = $this->scoring->evaluate($objects, $isms);
 
         return [
             'player' => [
@@ -44,6 +45,7 @@ final class GameStateService
                 'tile_size' => GameCatalog::scenario()['tile_size'],
                 'objects' => $this->hydrateObjects($objects, $evaluation['object_scores']),
             ],
+            'isms' => $isms,
             'score' => $evaluation['score'],
             'findings' => $evaluation['findings'],
             'latest_audit' => $repository->latestAuditReport($user['id']),
@@ -105,6 +107,41 @@ final class GameStateService
 
     /**
      * @param array{id:int,username:string,display_name:string,role:string} $user
+     * @param array<string,mixed> $fields
+     * @return array<string,mixed>
+     */
+    public function updateIsmsItem(array $user, string $itemType, string $itemKey, array $fields): array
+    {
+        $itemType = trim($itemType);
+        $itemKey = trim($itemKey);
+
+        if ($itemKey === '') {
+            throw new ApiException('INVALID_ISMS_ITEM', 400, 'An ISMS item key is required.');
+        }
+
+        $repository = $this->repository();
+        $repository->ensureInitialized($user['id']);
+
+        if ($itemType === 'asset') {
+            $repository->updateAssetInventoryItem($user['id'], $itemKey, $this->validateAssetFields($fields));
+            return $this->stateForUser($user);
+        }
+
+        if ($itemType === 'risk') {
+            $repository->updateRiskRegisterItem($user['id'], $itemKey, $this->validateRiskFields($fields));
+            return $this->stateForUser($user);
+        }
+
+        if ($itemType === 'evidence') {
+            $repository->updateEvidenceItem($user['id'], $itemKey, $this->validateEvidenceFields($fields));
+            return $this->stateForUser($user);
+        }
+
+        throw new ApiException('INVALID_ISMS_ITEM_TYPE', 400, 'The ISMS item type is not supported.');
+    }
+
+    /**
+     * @param array{id:int,username:string,display_name:string,role:string} $user
      * @return array<string,mixed>
      */
     public function runAudit(array $user): array
@@ -112,7 +149,7 @@ final class GameStateService
         $repository = $this->repository();
         $repository->ensureInitialized($user['id']);
         $objects = $repository->objects($user['id']);
-        $evaluation = $this->scoring->evaluate($objects);
+        $evaluation = $this->scoring->evaluate($objects, $repository->ismsArtifacts($user['id']));
         $report = $this->scoring->auditReport($evaluation);
         $repository->saveAuditReport($user['id'], $report);
 
@@ -125,6 +162,114 @@ final class GameStateService
     private function repository(): GameStateRepository
     {
         return new GameStateRepository($this->connections->pdo());
+    }
+
+    /**
+     * @param array<string,mixed> $fields
+     * @return array<string,mixed>
+     */
+    private function validateAssetFields(array $fields): array
+    {
+        $validated = [];
+
+        foreach ($fields as $field => $value) {
+            if ($field === 'status') {
+                $validated[$field] = $this->enumValue((string) $value, ['draft', 'verified'], 'INVALID_ASSET_STATUS');
+            } elseif ($field === 'criticality') {
+                $validated[$field] = $this->enumValue((string) $value, ['low', 'medium', 'high'], 'INVALID_ASSET_CRITICALITY');
+            } elseif (in_array($field, ['owner', 'notes'], true)) {
+                $validated[$field] = $this->boundedText((string) $value, $field === 'owner' ? 120 : 2000);
+            } else {
+                throw new ApiException('INVALID_ISMS_FIELD', 400, 'That field cannot be updated for this ISMS item.', ['field' => $field]);
+            }
+        }
+
+        return $validated;
+    }
+
+    /**
+     * @param array<string,mixed> $fields
+     * @return array<string,mixed>
+     */
+    private function validateRiskFields(array $fields): array
+    {
+        $validated = [];
+
+        foreach ($fields as $field => $value) {
+            if ($field === 'treatment_status') {
+                $validated[$field] = $this->enumValue((string) $value, ['identified', 'assessed', 'treated', 'accepted'], 'INVALID_RISK_STATUS');
+            } elseif (in_array($field, ['likelihood', 'impact'], true)) {
+                $validated[$field] = $this->boundedInt($value, 1, 5, 'INVALID_RISK_SCORE');
+            } elseif (in_array($field, ['owner', 'treatment_summary'], true)) {
+                $validated[$field] = $this->boundedText((string) $value, $field === 'owner' ? 120 : 2000);
+            } else {
+                throw new ApiException('INVALID_ISMS_FIELD', 400, 'That field cannot be updated for this ISMS item.', ['field' => $field]);
+            }
+        }
+
+        return $validated;
+    }
+
+    /**
+     * @param array<string,mixed> $fields
+     * @return array<string,mixed>
+     */
+    private function validateEvidenceFields(array $fields): array
+    {
+        $validated = [];
+
+        foreach ($fields as $field => $value) {
+            if ($field === 'status') {
+                $validated[$field] = $this->enumValue((string) $value, ['missing', 'draft', 'ready', 'reviewed'], 'INVALID_EVIDENCE_STATUS');
+            } elseif (in_array($field, ['owner', 'notes'], true)) {
+                $validated[$field] = $this->boundedText((string) $value, $field === 'owner' ? 120 : 2000);
+            } else {
+                throw new ApiException('INVALID_ISMS_FIELD', 400, 'That field cannot be updated for this ISMS item.', ['field' => $field]);
+            }
+        }
+
+        return $validated;
+    }
+
+    /**
+     * @param list<string> $allowed
+     */
+    private function enumValue(string $value, array $allowed, string $errorCode): string
+    {
+        if (!in_array($value, $allowed, true)) {
+            throw new ApiException($errorCode, 400, 'The selected value is not valid.');
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function boundedInt($value, int $min, int $max, string $errorCode): int
+    {
+        if (!is_numeric($value)) {
+            throw new ApiException($errorCode, 400, 'The numeric value is not valid.');
+        }
+
+        $intValue = (int) $value;
+
+        if ($intValue < $min || $intValue > $max) {
+            throw new ApiException($errorCode, 400, 'The numeric value is outside the allowed range.');
+        }
+
+        return $intValue;
+    }
+
+    private function boundedText(string $value, int $maxLength): string
+    {
+        $value = trim($value);
+
+        if (strlen($value) > $maxLength) {
+            throw new ApiException('TEXT_TOO_LONG', 400, 'The submitted text is too long.', ['max_length' => $maxLength]);
+        }
+
+        return $value;
     }
 
     /**
@@ -192,4 +337,3 @@ final class GameStateService
         return 'needs_attention';
     }
 }
-

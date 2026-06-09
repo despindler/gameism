@@ -52,6 +52,7 @@ final class Application
         $router->add('POST', '/api/logout', fn () => $authController->logout());
         $router->add('GET', '/api/game-state', fn () => $gameController->gameState());
         $router->add('POST', '/api/configure-object', fn (Request $request) => $gameController->configureObject($request));
+        $router->add('POST', '/api/update-isms-item', fn (Request $request) => $gameController->updateIsmsItem($request));
         $router->add('POST', '/api/run-audit', fn () => $gameController->runAudit());
 
         return new self($config, $router);

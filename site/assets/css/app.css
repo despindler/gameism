@@ -65,6 +65,27 @@ input {
     color: var(--ink);
 }
 
+select,
+textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+}
+
+select {
+    min-height: 36px;
+    padding: 7px 9px;
+}
+
+textarea {
+    min-height: 76px;
+    padding: 8px 10px;
+    resize: vertical;
+}
+
 label {
     display: grid;
     gap: 6px;
@@ -225,6 +246,7 @@ label {
 
 .asset-details,
 .findings-panel,
+.isms-panel,
 .audit-panel {
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -379,6 +401,87 @@ label {
     font-size: 0.82rem;
 }
 
+.isms-panel {
+    margin: 0 16px 16px;
+    overflow: hidden;
+}
+
+.panel-heading {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+}
+
+.panel-heading h2 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.isms-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.isms-tabs button {
+    min-height: 34px;
+    padding: 6px 10px;
+    border-color: var(--line);
+    background: #fff;
+    color: var(--ink);
+}
+
+.isms-tabs button.active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+}
+
+.isms-body {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 12px;
+    padding: 14px 16px 16px;
+}
+
+.artifact-card {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-2);
+}
+
+.artifact-card header {
+    display: grid;
+    gap: 4px;
+}
+
+.artifact-card h3 {
+    margin: 0;
+    font-size: 0.96rem;
+}
+
+.artifact-meta {
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.artifact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.artifact-grid .wide {
+    grid-column: 1 / -1;
+}
+
 .audit-panel {
     margin: 0 16px 16px;
     padding: 16px;
@@ -455,6 +558,10 @@ label {
     .details-panel {
         grid-template-columns: 1fr;
     }
+
+    .isms-body {
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+    }
 }
 
 @media (max-width: 720px) {
@@ -486,5 +593,9 @@ label {
     .scene-panel {
         min-height: 420px;
     }
-}
 
+    .panel-heading,
+    .isms-body {
+        grid-template-columns: 1fr;
+    }
+}

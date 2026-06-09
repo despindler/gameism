@@ -65,6 +65,70 @@ CREATE TABLE IF NOT EXISTS audit_reports (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS asset_inventory_items (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id INT UNSIGNED NOT NULL,
+    asset_key VARCHAR(80) NOT NULL,
+    object_key VARCHAR(80) NULL,
+    name VARCHAR(160) NOT NULL,
+    asset_type VARCHAR(80) NOT NULL,
+    owner VARCHAR(120) NOT NULL,
+    information_classification VARCHAR(80) NOT NULL,
+    criticality VARCHAR(20) NOT NULL,
+    status VARCHAR(40) NOT NULL DEFAULT 'draft',
+    notes TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_asset_inventory_user_key (user_id, asset_key),
+    KEY idx_asset_inventory_user_status (user_id, status),
+    CONSTRAINT fk_asset_inventory_user
+        FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS risk_register_items (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id INT UNSIGNED NOT NULL,
+    risk_key VARCHAR(80) NOT NULL,
+    object_key VARCHAR(80) NULL,
+    title VARCHAR(180) NOT NULL,
+    owner VARCHAR(120) NOT NULL,
+    likelihood TINYINT UNSIGNED NOT NULL,
+    impact TINYINT UNSIGNED NOT NULL,
+    treatment_status VARCHAR(40) NOT NULL DEFAULT 'identified',
+    treatment_summary TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_risk_register_user_key (user_id, risk_key),
+    KEY idx_risk_register_user_status (user_id, treatment_status),
+    CONSTRAINT fk_risk_register_user
+        FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS evidence_items (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id INT UNSIGNED NOT NULL,
+    evidence_key VARCHAR(80) NOT NULL,
+    object_key VARCHAR(80) NULL,
+    title VARCHAR(180) NOT NULL,
+    evidence_type VARCHAR(80) NOT NULL,
+    expected_evidence TEXT NOT NULL,
+    owner VARCHAR(120) NOT NULL,
+    status VARCHAR(40) NOT NULL DEFAULT 'missing',
+    notes TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_evidence_user_key (user_id, evidence_key),
+    KEY idx_evidence_user_status (user_id, status),
+    CONSTRAINT fk_evidence_user
+        FOREIGN KEY (user_id) REFERENCES users (id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS app_settings (
     setting_key VARCHAR(120) NOT NULL,
     setting_value TEXT NOT NULL,
@@ -72,4 +136,3 @@ CREATE TABLE IF NOT EXISTS app_settings (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (setting_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
