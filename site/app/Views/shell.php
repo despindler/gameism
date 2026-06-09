@@ -9,7 +9,7 @@
 </head>
 <body>
     <main id="auth-view" class="auth-shell" hidden>
-        <section class="auth-panel" aria-label="Sign in">
+        <section id="auth-panel" class="auth-panel" aria-label="Sign in">
             <div>
                 <p class="eyebrow">ISMS Office</p>
                 <h1>Physician Practice Simulation</h1>
@@ -25,9 +25,13 @@
                     <input name="password" type="password" autocomplete="current-password" required minlength="8">
                 </label>
                 <button type="submit">Sign in</button>
+                <p class="auth-switch">
+                    <span>New here?</span>
+                    <button id="show-register" class="link-button" type="button">Create Account</button>
+                </p>
             </form>
 
-            <form id="register-form" class="auth-form secondary">
+            <form id="register-form" class="auth-form" hidden>
                 <label>
                     Display name
                     <input name="display_name" autocomplete="name">
@@ -40,7 +44,11 @@
                     Password
                     <input name="password" type="password" autocomplete="new-password" required minlength="8">
                 </label>
-                <button type="submit">Create player</button>
+                <button type="submit">Create Account</button>
+                <p class="auth-switch">
+                    <span>Already have an account?</span>
+                    <button id="show-login" class="link-button" type="button">Sign in</button>
+                </p>
             </form>
 
             <p id="auth-message" class="message" role="alert"></p>
@@ -101,16 +109,26 @@
         <section id="panel-office" class="tab-panel active" role="tabpanel" aria-labelledby="tab-office" data-tab-panel="office">
             <section class="workspace">
                 <section class="scene-panel" aria-label="Office floor plan">
+                    <div class="map-view-toolbar">
+                        <div>
+                            <p class="eyebrow">View mode</p>
+                            <p id="map-mode-description" class="asset-type">Normal office map.</p>
+                        </div>
+                        <div id="map-view-controls" class="map-view-controls" role="toolbar" aria-label="Floor plan view modes">
+                            <button type="button" data-map-mode="overview" aria-pressed="true">Overview</button>
+                            <button type="button" data-map-mode="readiness" aria-pressed="false">Readiness</button>
+                            <button type="button" data-map-mode="evidence" aria-pressed="false">Evidence</button>
+                            <button type="button" data-map-mode="risk" aria-pressed="false">Risk</button>
+                            <button type="button" data-map-mode="audit" aria-pressed="false">Audit</button>
+                        </div>
+                    </div>
                     <canvas id="office-canvas" width="1120" height="720"></canvas>
                 </section>
 
-                <aside class="details-panel" aria-label="Office context">
-                    <div id="asset-details" class="asset-details"></div>
-                    <section class="findings-panel">
-                        <h2>Open Findings</h2>
-                        <div id="findings-list"></div>
-                    </section>
-                </aside>
+                <section class="findings-panel office-findings">
+                    <h2>Open Findings</h2>
+                    <div id="findings-list"></div>
+                </section>
             </section>
         </section>
 

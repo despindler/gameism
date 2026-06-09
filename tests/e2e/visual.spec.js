@@ -3,6 +3,13 @@ const { expect, test } = require('@playwright/test');
 test('authenticated office simulation renders and teaching loop works', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle('ISMS Office');
+  await expect(page.locator('#login-form')).toBeVisible();
+  await expect(page.locator('#register-form')).toBeHidden();
+  await page.getByRole('button', { name: 'Create Account' }).click();
+  await expect(page.locator('#register-form')).toBeVisible();
+  await expect(page.locator('#login-form')).toBeHidden();
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.locator('#login-form')).toBeVisible();
 
   await page.locator('#login-form input[name="username"]').fill('visual_user');
   await page.locator('#login-form input[name="password"]').fill('visualpass123');
@@ -79,9 +86,44 @@ test('authenticated office simulation renders and teaching loop works', async ({
   expect(canvasPlanStats.corridorPixels).toBeGreaterThan(100);
   expect(canvasPlanStats.uniqueColors).toBeGreaterThan(20);
 
+  const mapControls = page.locator('#map-view-controls');
+  await expect(mapControls.getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-pressed', 'true');
+  await mapControls.getByRole('button', { name: 'Audit' }).click();
+  await expect(mapControls.getByRole('button', { name: 'Audit' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#map-mode-description')).toContainText('open simulated audit findings');
+  const auditOverlayPixels = await page.locator('#office-canvas').evaluate((canvas) => {
+    const context = canvas.getContext('2d');
+    const sample = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    let redPixels = 0;
+
+    for (let index = 0; index < sample.length; index += 4) {
+      const red = sample[index];
+      const green = sample[index + 1];
+      const blue = sample[index + 2];
+      const alpha = sample[index + 3];
+
+      if (alpha > 0 && red > 170 && green < 90 && blue < 90) {
+        redPixels += 1;
+      }
+    }
+
+    return redPixels;
+  });
+  expect(auditOverlayPixels).toBeGreaterThan(100);
+  await mapControls.getByRole('button', { name: 'Evidence' }).click();
+  await expect(page.locator('#map-mode-description')).toContainText('audit evidence');
+  await mapControls.getByRole('button', { name: 'Overview' }).click();
+
   const canvas = page.locator('#office-canvas');
   const box = await canvas.boundingBox();
-  await page.mouse.click(box.x + box.width * 0.16, box.y + box.height * 0.23);
+  const mapPadding = 20;
+  const mapUnit = (box.width - mapPadding * 2) / 28;
+  const mapOffsetX = mapPadding;
+  const mapOffsetY = Math.max(mapPadding, (box.height - mapUnit * 18) / 2);
+  await page.mouse.click(
+    box.x + mapOffsetX + 4.5 * mapUnit,
+    box.y + mapOffsetY + 4 * mapUnit,
+  );
   const deviceDialog = page.getByRole('dialog');
   await expect(deviceDialog).toBeVisible();
   await expect(deviceDialog.getByRole('heading', { name: 'Reception PC' })).toBeVisible();

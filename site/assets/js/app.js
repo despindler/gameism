@@ -12,15 +12,20 @@
         lastReport: null,
         activeIsmsTab: 'assets',
         activePrimaryTab: 'office',
+        activeMapMode: 'overview',
         deviceModalOpen: false,
         deviceModalMode: 'profile',
+        registrationEnabled: true,
     };
 
     const els = {
         authView: document.getElementById('auth-view'),
+        authPanel: document.getElementById('auth-panel'),
         gameView: document.getElementById('game-view'),
         loginForm: document.getElementById('login-form'),
         registerForm: document.getElementById('register-form'),
+        showRegister: document.getElementById('show-register'),
+        showLogin: document.getElementById('show-login'),
         authMessage: document.getElementById('auth-message'),
         organizationName: document.getElementById('organization-name'),
         scoreOverall: document.getElementById('score-overall'),
@@ -35,9 +40,10 @@
         guidancePanel: document.getElementById('guidance-panel'),
         guidanceSummary: document.getElementById('guidance-summary'),
         guidanceList: document.getElementById('guidance-list'),
+        mapModeDescription: document.getElementById('map-mode-description'),
+        mapViewControls: document.getElementById('map-view-controls'),
         tabPanels: document.querySelectorAll('[data-tab-panel]'),
         canvas: document.getElementById('office-canvas'),
-        assetDetails: document.getElementById('asset-details'),
         findingsList: document.getElementById('findings-list'),
         ismsTabs: document.getElementById('isms-tabs'),
         ismsBody: document.getElementById('isms-body'),
@@ -123,6 +129,29 @@
             { label: 'Server rack', type: 'rack', x: 21.1, y: 11.25, width: 5.8, height: 5.8 },
         ],
     };
+    const mapModes = {
+        overview: {
+            label: 'Overview',
+            description: 'Normal office map.',
+        },
+        readiness: {
+            label: 'Readiness',
+            description: 'Shows each asset readiness percentage.',
+        },
+        evidence: {
+            label: 'Evidence',
+            description: 'Highlights missing or draft audit evidence linked to each asset.',
+        },
+        risk: {
+            label: 'Risk',
+            description: 'Highlights untreated or unaccepted risks linked to each asset.',
+        },
+        audit: {
+            label: 'Audit',
+            description: 'Highlights open simulated audit findings for each asset.',
+        },
+    };
+    const floorPlanPadding = 20;
 
     async function api(path, options = {}) {
         const request = {
@@ -152,9 +181,20 @@
         return payload;
     }
 
+    function setAuthMode(mode) {
+        const showRegisterForm = mode === 'register' && state.registrationEnabled;
+
+        els.loginForm.hidden = showRegisterForm;
+        els.registerForm.hidden = !showRegisterForm;
+        els.showRegister.hidden = !state.registrationEnabled;
+        els.authPanel.setAttribute('aria-label', showRegisterForm ? 'Create account' : 'Sign in');
+        els.authMessage.textContent = '';
+    }
+
     function showAuth(message = '') {
         els.authView.hidden = false;
         els.gameView.hidden = true;
+        setAuthMode('login');
         els.authMessage.textContent = message;
     }
 
@@ -168,7 +208,8 @@
     async function bootstrap() {
         try {
             const authConfig = await api('auth-config');
-            els.registerForm.hidden = !authConfig.registration_enabled;
+            state.registrationEnabled = Boolean(authConfig.registration_enabled);
+            setAuthMode('login');
             const me = await api('me');
 
             if (me.user) {
@@ -199,8 +240,8 @@
 
         renderHud();
         renderGuidance();
+        renderMapModeControls();
         drawOffice();
-        renderDetails();
         renderFindings();
         renderIsmsPanel();
         renderTeachingPanel();
@@ -217,6 +258,18 @@
         els.scoreDocumentation.textContent = `${categories.documentation.percent}%`;
         els.scoreResilience.textContent = `${categories.resilience.percent}%`;
         els.scoreAudit.textContent = `${categories.audit.percent}%`;
+    }
+
+    function renderMapModeControls() {
+        const mode = mapModes[state.activeMapMode] ? state.activeMapMode : 'overview';
+        state.activeMapMode = mode;
+        els.mapModeDescription.textContent = mapModes[mode].description;
+
+        for (const button of els.mapViewControls.querySelectorAll('[data-map-mode]')) {
+            const active = button.dataset.mapMode === mode;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        }
     }
 
     function renderGuidance() {
@@ -368,7 +421,14 @@
     function resizeCanvas() {
         const rect = els.canvas.getBoundingClientRect();
         const width = Math.max(320, Math.floor(rect.width));
-        const height = Math.max(320, Math.floor(rect.height));
+        let height = Math.max(320, Math.floor(rect.height));
+
+        if (state.game && state.game.map) {
+            const drawableWidth = Math.max(1, width - floorPlanPadding * 2);
+            height = Math.ceil((drawableWidth * state.game.map.height) / state.game.map.width + floorPlanPadding * 2);
+            els.canvas.style.height = `${height}px`;
+        }
+
         const ratio = window.devicePixelRatio || 1;
         els.canvas.width = Math.floor(width * ratio);
         els.canvas.height = Math.floor(height * ratio);
@@ -385,10 +445,10 @@
         const width = Math.max(320, rect.width);
         const height = Math.max(320, rect.height);
         const map = state.game.map;
-        const padding = 28;
-        const unit = Math.min((width - padding * 2) / map.width, (height - padding * 2) / map.height);
-        const offsetX = (width - unit * map.width) / 2;
-        const offsetY = (height - unit * map.height) / 2;
+        const padding = floorPlanPadding;
+        const unit = (width - padding * 2) / map.width;
+        const offsetX = padding;
+        const offsetY = Math.max(padding, (height - unit * map.height) / 2);
         state.transform = { unit, offsetX, offsetY };
         state.hitBoxes = [];
 
@@ -502,6 +562,7 @@
 
         drawDeviceShape(object, x, y, w, h, colors, unit);
         drawObjectStatus(object, x, y, w, h);
+        drawObjectOverlay(object, x, y, w, h, unit);
 
         state.hitBoxes.push({
             key: object.object_key,
@@ -510,6 +571,105 @@
             w,
             h,
         });
+    }
+
+    function drawObjectOverlay(object, x, y, w, h, unit) {
+        if (state.activeMapMode === 'overview') {
+            return;
+        }
+
+        const metric = objectOverlayMetric(object);
+        const badgeHeight = Math.max(18, Math.min(24, unit * 0.62));
+        const fontSize = Math.max(9, Math.min(12, unit * 0.34));
+        ctx.save();
+        ctx.font = `850 ${fontSize}px system-ui, sans-serif`;
+        const badgeWidth = Math.min(w + 18, Math.max(56, ctx.measureText(metric.label).width + 20));
+        const badgeX = x + w / 2 - badgeWidth / 2;
+        const badgeY = y - badgeHeight - Math.max(5, unit * 0.16);
+
+        ctx.shadowColor = metric.shadow;
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetY = 2;
+        ctx.strokeStyle = metric.color;
+        ctx.lineWidth = Math.max(2, Math.min(4, unit * 0.12));
+        roundRect(x - 4, y - 4, w + 8, h + 8, 10, false, true);
+
+        ctx.shadowColor = 'transparent';
+        ctx.fillStyle = metric.fill;
+        ctx.strokeStyle = metric.color;
+        ctx.lineWidth = 1.5;
+        roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 999, true, true);
+        ctx.fillStyle = metric.text;
+        ctx.font = `850 ${fontSize}px system-ui, sans-serif`;
+        drawFittedText(metric.label, badgeX + 10, badgeY + badgeHeight / 2 + fontSize / 3 - 1, badgeWidth - 20, fontSize);
+        ctx.restore();
+    }
+
+    function objectOverlayMetric(object) {
+        if (state.activeMapMode === 'readiness') {
+            return overlayMetric(`${object.score.percent}%`, readinessTone(object.score.percent));
+        }
+
+        if (state.activeMapMode === 'evidence') {
+            const items = linkedItems(state.game.isms.evidence, object.object_key);
+            const incomplete = items.filter(isEvidenceIncomplete).length;
+            const ready = Math.max(0, items.length - incomplete);
+
+            if (items.length === 0) {
+                return overlayMetric('No evidence', 'neutral');
+            }
+
+            return overlayMetric(`${ready}/${items.length}`, incomplete === 0 ? 'ready' : ready === 0 ? 'critical' : 'warning');
+        }
+
+        if (state.activeMapMode === 'risk') {
+            const risks = linkedItems(state.game.isms.risks, object.object_key);
+            const untreated = risks.filter(isRiskUntreated).length;
+
+            if (risks.length === 0) {
+                return overlayMetric('No risk', 'neutral');
+            }
+
+            return overlayMetric(`${untreated}/${risks.length}`, untreated === 0 ? 'ready' : untreated === risks.length ? 'critical' : 'warning');
+        }
+
+        if (state.activeMapMode === 'audit') {
+            const findings = findingsForObject(object.object_key).length;
+
+            return overlayMetric(findings === 0 ? 'Clear' : `${findings} gaps`, findings === 0 ? 'ready' : findings > 2 ? 'critical' : 'warning');
+        }
+
+        return overlayMetric('', 'neutral');
+    }
+
+    function overlayMetric(label, tone) {
+        const tones = {
+            ready: ['#2f8f5b', '#eaf7ef', '#123d25', 'rgba(47, 143, 91, 0.25)'],
+            warning: ['#c28622', '#fff5df', '#5b3b09', 'rgba(194, 134, 34, 0.28)'],
+            critical: ['#bd3b3b', '#fdecec', '#5a1717', 'rgba(189, 59, 59, 0.3)'],
+            neutral: ['#6b7785', '#f1f4f6', '#26313a', 'rgba(85, 99, 110, 0.2)'],
+        };
+        const palette = tones[tone] || tones.neutral;
+
+        return {
+            label,
+            color: palette[0],
+            fill: palette[1],
+            text: palette[2],
+            shadow: palette[3],
+        };
+    }
+
+    function readinessTone(percent) {
+        if (percent >= 85) {
+            return 'ready';
+        }
+
+        if (percent >= 50) {
+            return 'warning';
+        }
+
+        return 'critical';
     }
 
     function drawFurniture(offsetX, offsetY, unit) {
@@ -905,55 +1065,6 @@
         if (stroke) {
             ctx.stroke();
         }
-    }
-
-    function renderDetails() {
-        const object = selectedObject();
-
-        if (!object) {
-            els.assetDetails.innerHTML = '<p class="empty-state">Click a device on the floor plan to inspect its controls, risks, evidence, and actions.</p>';
-            return;
-        }
-
-        const score = object.score.percent;
-        const enabledControls = object.controls.filter((control) => control.enabled).length;
-        const openFindings = findingsForObject(object.object_key).length;
-
-        els.assetDetails.innerHTML = `
-            <div class="asset-header">
-                <div>
-                    <h2>Selected Device</h2>
-                    <p class="asset-type">${escapeHtml(object.display_name)} - ${escapeHtml(typeLabel(object.object_type))}</p>
-                </div>
-                <span class="status-badge ${escapeAttr(object.state)}">${escapeHtml(stateLabel(object.state))}</span>
-            </div>
-            <div class="meter" aria-label="Asset readiness">
-                <span style="width: ${score}%"></span>
-            </div>
-            <div class="asset-summary-list">
-                <div class="summary-row">
-                    <strong>Readiness</strong>
-                    <span>${score}%</span>
-                </div>
-                <div class="summary-row">
-                    <strong>Controls enabled</strong>
-                    <span>${enabledControls}/${object.controls.length}</span>
-                </div>
-                <div class="summary-row">
-                    <strong>Open findings</strong>
-                    <span>${openFindings}</span>
-                </div>
-            </div>
-            <div class="teaching-actions">
-                <button type="button" data-open-device-profile="${escapeAttr(object.object_key)}">Inspect</button>
-                <button class="secondary" type="button" data-open-device-config="${escapeAttr(object.object_key)}">Configure</button>
-            </div>
-        `;
-
-        const profileButton = els.assetDetails.querySelector('[data-open-device-profile]');
-        const configButton = els.assetDetails.querySelector('[data-open-device-config]');
-        profileButton.addEventListener('click', () => openDeviceModal(object.object_key, 'profile'));
-        configButton.addEventListener('click', () => openDeviceModal(object.object_key, 'configure'));
     }
 
     function renderDeviceModal() {
@@ -1670,7 +1781,6 @@
         }
 
         state.busy = true;
-        renderDetails();
 
         try {
             const payload = await api('configure-object', {
@@ -1894,6 +2004,14 @@
         return Object.fromEntries(new FormData(form).entries());
     }
 
+    els.showRegister.addEventListener('click', () => {
+        setAuthMode('register');
+    });
+
+    els.showLogin.addEventListener('click', () => {
+        setAuthMode('login');
+    });
+
     els.loginForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         els.authMessage.textContent = '';
@@ -1957,6 +2075,18 @@
         }
 
         handleGuidanceAction(button.dataset.guidanceAction, button.dataset.guidanceTarget);
+    });
+
+    els.mapViewControls.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-map-mode]');
+
+        if (!button) {
+            return;
+        }
+
+        state.activeMapMode = button.dataset.mapMode;
+        renderMapModeControls();
+        drawOffice();
     });
 
     els.ismsTabs.addEventListener('click', (event) => {

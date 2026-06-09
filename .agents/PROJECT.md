@@ -286,3 +286,35 @@ Next steps:
 - Add persistent objective focus or dismissal for guidance cards.
 - Add auditor-role views that inspect evidence samples and interview prompts.
 - Move workflow and stepper rules into scenario metadata once multiple scenarios are introduced.
+
+## UI Phase 6 - Floor-Plan Overlays And View Modes
+
+Date: 2026-06-10
+
+Goal: Let players inspect different ISMS concerns directly on the office map without opening every device profile.
+
+What changed:
+
+- Added a compact floor-plan View mode toolbar in the Office scene.
+- Added map modes for Overview, Readiness, Evidence, Risk, and Audit.
+- Added canvas overlays that draw colored rings and compact badges over each clickable asset.
+- Derived overlay metrics from existing game state: object readiness, linked evidence completeness, linked risk treatment, and open findings.
+- Updated Playwright coverage to verify the view-mode toolbar and that the audit overlay changes canvas pixels.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+
+Known issues and decisions:
+
+- Overlay rules are frontend-only for now, consistent with the advisor and stepper phases.
+- View modes are informational; they do not filter or hide assets.
+- Evidence and risk overlays depend on current scenario links, so assets without linked artifacts show neutral badges.
+
+Next steps:
+
+- Add persistent objective focus or dismissal for guidance cards.
+- Add auditor-role views that inspect evidence samples and interview prompts.
+- Move floor-plan overlay definitions into scenario metadata when multiple scenarios are introduced.

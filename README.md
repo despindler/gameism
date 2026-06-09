@@ -29,6 +29,7 @@ After login, the player configures a small physician office from the floor plan 
 - A compact advisor strip shows state-driven guidance hints and direct actions for the next useful work.
 - Internal audit and certification-prep steppers show where the player is in each review workflow.
 - The Office tab shows a schematic physician-office floor plan with rooms, an aisle, doors, furniture, and type-specific device drawings.
+- Floor-plan view modes overlay readiness, evidence, risk, and audit status directly on each clickable asset.
 - Floor-plan assets open a device profile modal with linked controls, risks, evidence, findings, and corrective actions.
 - Device configuration happens inside the modal instead of a permanent side panel.
 - Inventory items track owners, classification, criticality, and verification status.
@@ -77,4 +78,4 @@ npx playwright install chromium
 npm run test:visual
 ```
 
-The Playwright test uses `site/.env.test`, resets the configured disposable database through `tests/seed_visual.php`, starts the PHP built-in server with `GAMEISM_ENV_FILE=site/.env.test`, logs in as a seeded user, checks the guidance advisor, checks that the canvas is nonblank and includes the richer floor-plan layers, exercises the device profile/configuration modal, and checks the ISMS, Teaching Loop, internal-audit stepper, certification-prep stepper, and Audits tab.
+The Playwright test uses `site/.env.test`, resets the configured disposable database through `tests/seed_visual.php`, starts the PHP built-in server with `GAMEISM_ENV_FILE=site/.env.test`, logs in as a seeded user, checks the guidance advisor, checks that the canvas is nonblank and includes the richer floor-plan layers, verifies floor-plan overlay modes, exercises the device profile/configuration modal, and checks the ISMS, Teaching Loop, internal-audit stepper, certification-prep stepper, and Audits tab.
