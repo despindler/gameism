@@ -1,8 +1,8 @@
 # Process Stepper Specification
 
-This document specifies the process stepper pattern used in this application so a Codex agent can recreate the same visual guidance component in other applications.
+This document specifies the process stepper pattern so a Codex agent can recreate the same visual guidance component in other applications.
 
-The implementation in this repository lives in `site/index.php` and is used by both the use-case wizard and the self-hosted AI needs wizard. It is a compact, horizontal, chevron-style stepper made from ordinary buttons, CSS pseudo-elements, and a small amount of JavaScript that toggles the active step.
+The implementation is a compact, horizontal, chevron-style stepper made from ordinary buttons, CSS pseudo-elements, and a small amount of JavaScript that toggles the active step.
 
 ## Purpose
 
@@ -64,7 +64,7 @@ Define these project-level colors or map them to an existing design system:
 }
 ```
 
-In this application the equivalent variables are named `--survey-ink`, `--survey-muted`, `--survey-line`, and `--survey-accent`.
+In this example application the equivalent variables are named `--survey-ink`, `--survey-muted`, `--survey-line`, and `--survey-accent`.
 
 ## Required DOM Structure
 
@@ -159,7 +159,7 @@ Implementation requirements:
 
 ## CSS Specification
 
-This is the reusable version of the app's stepper CSS. Rename variables as needed.
+This is the reusable version of the example app's stepper CSS. Rename variables as needed.
 
 ```css
 .wizard-progress {
@@ -414,9 +414,9 @@ If a page has multiple different wizards, either:
 - use the same initializer with different root elements, or
 - pass different selectors such as `[data-needs-step-target]`, `[data-needs-next]`, and `[data-needs-prev]`.
 
-The current app uses two separate wizard scripts because the forms have different review and validation logic, but the stepper state logic is the same.
+The current example app uses two separate wizard scripts because the forms have different review and validation logic, but the stepper state logic is the same.
 
-## Validation Pattern Used In This App
+## Validation Pattern Used In This Example App
 
 The stepper does not block movement between steps. Users may click any step at any time.
 
