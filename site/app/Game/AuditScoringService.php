@@ -234,8 +234,8 @@ final class AuditScoringService
                     'control_key' => 'incident_' . $incident['incident_key'],
                     'control_label' => 'Incident response',
                     'severity' => $incident['severity'] === 'major' ? 'major' : 'minor',
-                    'title' => 'Incident drill is active and unresolved.',
-                    'recommendation' => 'Complete and verify the linked corrective action before closing the drill.',
+                    'title' => 'Timeline event is active and unresolved.',
+                    'recommendation' => 'Complete and verify the linked corrective action before resolving the event.',
                     'primary_category' => 'resilience',
                 ];
             }

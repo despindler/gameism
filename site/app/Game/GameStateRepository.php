@@ -127,28 +127,6 @@ final class GameStateRepository
                 ]);
             }
 
-            foreach (GameCatalog::incidentDrills() as $definition) {
-                $statement = $this->pdo->prepare(
-                    'INSERT IGNORE INTO incident_events
-                        (user_id, incident_key, object_key, title, description, severity, status, trigger_text, lesson_text, required_controls_json, required_evidence_json)
-                     VALUES
-                        (:user_id, :incident_key, :object_key, :title, :description, :severity, :status, :trigger_text, :lesson_text, :required_controls_json, :required_evidence_json)'
-                );
-                $statement->execute([
-                    'user_id' => $userId,
-                    'incident_key' => $definition['incident_key'],
-                    'object_key' => $definition['object_key'],
-                    'title' => $definition['title'],
-                    'description' => $definition['description'],
-                    'severity' => $definition['severity'],
-                    'status' => $definition['status'],
-                    'trigger_text' => $definition['trigger_text'],
-                    'lesson_text' => $definition['lesson_text'],
-                    'required_controls_json' => $this->encodeJson($definition['required_controls']),
-                    'required_evidence_json' => $this->encodeJson($definition['required_evidence']),
-                ]);
-            }
-
             $timelineState = $this->pdo->prepare(
                 'INSERT IGNORE INTO timeline_states (user_id, last_advanced_at) VALUES (:user_id, CURRENT_TIMESTAMP)'
             );
@@ -435,13 +413,13 @@ final class GameStateRepository
             return;
         }
 
-        $incident = $this->nextAvailableIncident($userId);
+        $incidentKey = $this->nextAvailableIncidentKey($userId);
 
-        if ($incident === null) {
+        if ($incidentKey === null) {
             return;
         }
 
-        $this->startIncident($userId, $incident['incident_key']);
+        $this->startIncident($userId, $incidentKey);
     }
 
     /**
@@ -484,34 +462,43 @@ final class GameStateRepository
      */
     public function incidentEvents(int $userId): array
     {
-        $statement = $this->pdo->prepare(
-            'SELECT id, incident_key, object_key, title, description, severity, status, trigger_text, lesson_text,
-                    required_controls_json, required_evidence_json, started_at, resolved_at, updated_at
-             FROM incident_events
-             WHERE user_id = :user_id
-             ORDER BY FIELD(status, "active", "available", "resolved"), id ASC'
-        );
-        $statement->execute(['user_id' => $userId]);
+        $eventsBySourceKey = [];
+
+        foreach ($this->timelineEvents($userId) as $event) {
+            if ($event['source_type'] === 'incident') {
+                $eventsBySourceKey[$event['source_key']] = $event;
+            }
+        }
+
         $items = [];
 
-        foreach ($statement->fetchAll() as $record) {
+        foreach (GameCatalog::incidentDrills() as $index => $definition) {
+            $event = $eventsBySourceKey[$definition['incident_key']] ?? null;
+            $status = is_array($event) ? (string) $event['status'] : 'available';
             $items[] = [
-                'id' => (int) $record['id'],
-                'incident_key' => (string) $record['incident_key'],
-                'object_key' => (string) $record['object_key'],
-                'title' => (string) $record['title'],
-                'description' => (string) $record['description'],
-                'severity' => (string) $record['severity'],
-                'status' => (string) $record['status'],
-                'trigger_text' => (string) $record['trigger_text'],
-                'lesson_text' => (string) $record['lesson_text'],
-                'required_controls' => $this->decodeJson((string) $record['required_controls_json']),
-                'required_evidence' => $this->decodeJson((string) $record['required_evidence_json']),
-                'started_at' => $record['started_at'] !== null ? (string) $record['started_at'] : null,
-                'resolved_at' => $record['resolved_at'] !== null ? (string) $record['resolved_at'] : null,
-                'updated_at' => (string) $record['updated_at'],
+                'id' => is_array($event) ? (int) $event['id'] : $index + 1,
+                'incident_key' => (string) $definition['incident_key'],
+                'object_key' => (string) $definition['object_key'],
+                'title' => (string) $definition['title'],
+                'description' => (string) $definition['description'],
+                'severity' => (string) $definition['severity'],
+                'status' => $status,
+                'trigger_text' => (string) $definition['trigger_text'],
+                'lesson_text' => (string) $definition['lesson_text'],
+                'required_controls' => $definition['required_controls'],
+                'required_evidence' => $definition['required_evidence'],
+                'started_at' => is_array($event) ? (string) $event['occurred_at'] : null,
+                'resolved_at' => is_array($event) ? $event['resolved_at'] : null,
+                'updated_at' => is_array($event) ? (string) $event['updated_at'] : null,
             ];
         }
+
+        usort($items, static function (array $a, array $b): int {
+            $rank = ['active' => 0, 'available' => 1, 'resolved' => 2];
+
+            return ($rank[$a['status']] ?? 9) <=> ($rank[$b['status']] ?? 9)
+                ?: ((int) $a['id'] <=> (int) $b['id']);
+        });
 
         return $items;
     }
@@ -556,16 +543,7 @@ final class GameStateRepository
         $incident = $this->incidentEvent($userId, $incidentKey);
 
         if ($incident['status'] === 'resolved') {
-            throw new ApiException('INCIDENT_ALREADY_RESOLVED', 409, 'That incident drill has already been resolved.');
-        }
-
-        if ($incident['status'] === 'available') {
-            $statement = $this->pdo->prepare(
-                'UPDATE incident_events
-                 SET status = "active", started_at = COALESCE(started_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP
-                 WHERE user_id = :user_id AND incident_key = :incident_key'
-            );
-            $statement->execute(['user_id' => $userId, 'incident_key' => $incidentKey]);
+            throw new ApiException('INCIDENT_ALREADY_RESOLVED', 409, 'That timeline event has already been resolved.');
         }
 
         $definition = $this->incidentDefinition($incidentKey);
@@ -588,7 +566,7 @@ final class GameStateRepository
             'source_type' => 'incident',
             'source_key' => $incidentKey,
             'object_key' => $incident['object_key'],
-            'title' => $definition['corrective_action_title'] ?? ('Resolve incident drill: ' . $incident['title']),
+            'title' => $definition['corrective_action_title'] ?? ('Resolve timeline event: ' . $incident['title']),
             'owner' => $definition['owner'] ?? 'Practice Manager',
             'due_days' => 7,
             'status' => 'open',
@@ -602,7 +580,7 @@ final class GameStateRepository
         $incident = $this->incidentEvent($userId, $incidentKey);
 
         if ($incident['status'] !== 'active') {
-            throw new ApiException('INCIDENT_NOT_ACTIVE', 409, 'Only active incident drills can be resolved.');
+            throw new ApiException('INCIDENT_NOT_ACTIVE', 409, 'Only active timeline events can be resolved.');
         }
 
         $statement = $this->pdo->prepare(
@@ -618,40 +596,31 @@ final class GameStateRepository
         $action = $statement->fetch();
 
         if (!is_array($action) || $action['status'] !== 'verified' || $action['verification_status'] !== 'effective') {
-            throw new ApiException('CORRECTIVE_ACTION_NOT_VERIFIED', 409, 'Verify the corrective action as effective before resolving the incident drill.');
+            throw new ApiException('CORRECTIVE_ACTION_NOT_VERIFIED', 409, 'Verify the corrective action as effective before resolving the timeline event.');
         }
 
-        $update = $this->pdo->prepare(
-            'UPDATE incident_events
-             SET status = "resolved", resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-             WHERE user_id = :user_id AND incident_key = :incident_key'
-        );
-        $update->execute(['user_id' => $userId, 'incident_key' => $incidentKey]);
         $this->resolveTimelineEvent($userId, 'incident:' . $incidentKey);
     }
 
-    /**
-     * @return array{incident_key:string}|null
-     */
-    private function nextAvailableIncident(int $userId): ?array
+    private function nextAvailableIncidentKey(int $userId): ?string
     {
-        $statement = $this->pdo->prepare(
-            'SELECT incident_key
-             FROM incident_events
-             WHERE user_id = :user_id AND status = "available"
-             ORDER BY id ASC
-             LIMIT 1'
-        );
-        $statement->execute(['user_id' => $userId]);
-        $record = $statement->fetch();
+        $usedKeys = [];
 
-        if (!is_array($record)) {
-            return null;
+        foreach ($this->timelineEvents($userId) as $event) {
+            if ($event['source_type'] === 'incident') {
+                $usedKeys[(string) $event['source_key']] = true;
+            }
         }
 
-        return [
-            'incident_key' => (string) $record['incident_key'],
-        ];
+        foreach (GameCatalog::incidentDrills() as $definition) {
+            $incidentKey = (string) $definition['incident_key'];
+
+            if (!isset($usedKeys[$incidentKey])) {
+                return $incidentKey;
+            }
+        }
+
+        return null;
     }
 
     private function activeTimelineEventCount(int $userId): int
@@ -864,25 +833,55 @@ final class GameStateRepository
      */
     private function incidentEvent(int $userId, string $incidentKey): array
     {
+        $definition = $this->incidentDefinition($incidentKey);
+
+        if ($definition === []) {
+            throw new ApiException('INCIDENT_NOT_FOUND', 404, 'The selected timeline event does not exist.');
+        }
+
+        $event = $this->timelineEventByKey($userId, 'incident:' . $incidentKey);
+
+        return [
+            'incident_key' => (string) $definition['incident_key'],
+            'object_key' => (string) $definition['object_key'],
+            'title' => (string) $definition['title'],
+            'status' => is_array($event) ? (string) $event['status'] : 'available',
+            'lesson_text' => (string) $definition['lesson_text'],
+        ];
+    }
+
+    /**
+     * @return array<string,mixed>|null
+     */
+    private function timelineEventByKey(int $userId, string $eventKey): ?array
+    {
         $statement = $this->pdo->prepare(
-            'SELECT incident_key, object_key, title, status, lesson_text
-             FROM incident_events
-             WHERE user_id = :user_id AND incident_key = :incident_key
+            'SELECT id, event_key, source_type, source_key, object_key, title, body, severity, status, impact_json, occurred_at, resolved_at, updated_at
+             FROM timeline_events
+             WHERE user_id = :user_id AND event_key = :event_key
              LIMIT 1'
         );
-        $statement->execute(['user_id' => $userId, 'incident_key' => $incidentKey]);
+        $statement->execute(['user_id' => $userId, 'event_key' => $eventKey]);
         $record = $statement->fetch();
 
         if (!is_array($record)) {
-            throw new ApiException('INCIDENT_NOT_FOUND', 404, 'The selected incident drill does not exist.');
+            return null;
         }
 
         return [
-            'incident_key' => (string) $record['incident_key'],
-            'object_key' => (string) $record['object_key'],
+            'id' => (int) $record['id'],
+            'event_key' => (string) $record['event_key'],
+            'source_type' => (string) $record['source_type'],
+            'source_key' => (string) $record['source_key'],
+            'object_key' => $record['object_key'] !== null ? (string) $record['object_key'] : null,
             'title' => (string) $record['title'],
+            'body' => (string) $record['body'],
+            'severity' => (string) $record['severity'],
             'status' => (string) $record['status'],
-            'lesson_text' => (string) $record['lesson_text'],
+            'impact' => $this->decodeJson((string) $record['impact_json']),
+            'occurred_at' => (string) $record['occurred_at'],
+            'resolved_at' => $record['resolved_at'] !== null ? (string) $record['resolved_at'] : null,
+            'updated_at' => (string) $record['updated_at'],
         ];
     }
 

@@ -367,7 +367,7 @@
                 tone: 'empty',
                 meta: 'Timeline',
                 title: 'No events yet',
-                body: 'Incident drills and corrective actions will appear here as the office simulation becomes more active.',
+                body: 'Simulation events and corrective actions will appear here as the office timeline becomes more active.',
             });
         }
 
@@ -467,20 +467,20 @@
         if (activeIncident) {
             items.push({
                 tone: 'warning',
-                title: 'Resolve active drill',
-                body: `${activeIncident.title} is running. Finish evidence and action checks before resolving it.`,
+                title: 'Resolve active event',
+                body: `${activeIncident.title} is active. Finish evidence and action checks before resolving it.`,
                 action: 'open-operations',
                 buttonText: 'Operations',
-                buttonLabel: 'Open active drill',
+                buttonLabel: 'Open active event',
             });
         } else if (availableIncident) {
             items.push({
                 tone: 'ready',
-                title: 'Run an incident drill',
+                title: 'Start a timeline event',
                 body: `${availableIncident.title} can turn current gaps into corrective-action practice.`,
                 action: 'open-operations',
                 buttonText: 'Operations',
-                buttonLabel: 'Open incident drills',
+                buttonLabel: 'Open simulation events',
             });
         }
 
@@ -1591,11 +1591,11 @@
     function renderOperationsPanel() {
         const teaching = state.game.teaching;
         const scores = state.game.score.teaching;
-        els.teachingScoreSummary.textContent = `Incidents ${scores.incidents.percent}% - Corrective actions ${scores.corrective_actions.percent}%`;
+        els.teachingScoreSummary.textContent = `Events ${scores.incidents.percent}% - Corrective actions ${scores.corrective_actions.percent}%`;
 
         els.incidentList.innerHTML = teaching.incidents.length
             ? teaching.incidents.map(renderIncidentCard).join('')
-            : '<p class="empty-state">No incident drills are available.</p>';
+            : '<p class="empty-state">No simulation events are available.</p>';
 
         els.correctiveActionList.innerHTML = teaching.corrective_actions.length
             ? teaching.corrective_actions.map(renderCorrectiveActionCard).join('')
@@ -1746,7 +1746,7 @@
 
     function renderIncidentCard(incident) {
         const buttonHtml = incident.status === 'available'
-            ? `<button type="button" data-incident-action="start" data-incident-key="${escapeAttr(incident.incident_key)}" ${state.busy ? 'disabled' : ''}>Start drill</button>`
+            ? `<button type="button" data-incident-action="start" data-incident-key="${escapeAttr(incident.incident_key)}" ${state.busy ? 'disabled' : ''}>Start event</button>`
             : incident.status === 'active'
                 ? `<button type="button" data-incident-action="resolve" data-incident-key="${escapeAttr(incident.incident_key)}" ${state.busy ? 'disabled' : ''}>Resolve</button>`
                 : '';
@@ -1868,7 +1868,7 @@
                 },
             });
             state.game = payload.game_state;
-            showToast(action === 'resolve' ? 'Incident drill resolved.' : 'Incident drill started.');
+            showToast(action === 'resolve' ? 'Timeline event resolved.' : 'Timeline event started.');
         } catch (error) {
             showToast(error.message);
         } finally {

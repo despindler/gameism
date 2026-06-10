@@ -458,15 +458,15 @@ How to verify:
 
 Known issues and decisions:
 
-- The existing `incident_events` table remains the per-user incident catalog/state table for now.
-- Timeline event generation is still manually triggered through incident drills; random/offline progression is a later milestone.
+- Resolved in Milestone 8: `timeline_events` is now the per-user event state source, and the old `incident_events` table has been removed from the current schema.
+- Timeline event generation is still manually triggered through the scenario event catalog; random/offline progression is a later milestone.
 - Corrective actions are still rendered as follow-up feed items but are not separate `timeline_events` rows yet.
 
 Next steps:
 
 - Add offline timeline progression and bounded event generation.
 - Feed operational consequences into the simulated Audit report.
-- Consider renaming or reshaping `incident_events` once the event catalog matures.
+- Expand the event catalog beyond the initial incident scenarios.
 
 ## Milestone 6 - Offline Timeline Progression
 
@@ -543,3 +543,40 @@ Next steps:
 - Decide whether to remove or merge the internal-audit backend under the prototype clean-slate rule.
 - Add difficulty and guidance controls for the Advisor drawer.
 - Expand the event catalog beyond the current incident drills.
+
+## Milestone 8 - Timeline Events As Event State
+
+Date: 2026-06-10
+
+Goal: Finish replacing per-player incident drill state with durable timeline event instances.
+
+What changed:
+
+- Removed the `incident_events` table from the current schema.
+- Removed per-user incident initialization from game-state setup.
+- `teaching.incidents` is now derived from the scenario event catalog plus persisted `timeline_events`.
+- Starting an event creates or updates a `timeline_events` row and a linked corrective action.
+- Resolving an event updates the `timeline_events` row directly.
+- Offline progression now chooses the next unused scenario event by comparing the catalog with existing timeline events.
+- Updated UI copy from incident drills to simulation/timeline events.
+- Updated smoke tests to assert that the old `incident_events` table is no longer part of the current schema.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- API method names still use `startIncident` and `resolveIncident` as a compatibility layer around timeline events.
+- The catalog method is still named `incidentDrills`; renaming it belongs with a broader event-catalog cleanup.
+- The visible game state still exposes `teaching.incidents` until Operations/Events state naming is refactored.
+
+Next steps:
+
+- Rename compatibility APIs and state keys when the frontend is ready for a broader event-model cleanup.
+- Add more event types beyond the initial incident scenarios.
+- Add difficulty and guidance controls for the Advisor drawer.

@@ -129,31 +129,6 @@ CREATE TABLE IF NOT EXISTS evidence_items (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS incident_events (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    user_id INT UNSIGNED NOT NULL,
-    incident_key VARCHAR(80) NOT NULL,
-    object_key VARCHAR(80) NULL,
-    title VARCHAR(180) NOT NULL,
-    description TEXT NOT NULL,
-    severity VARCHAR(20) NOT NULL,
-    status VARCHAR(40) NOT NULL DEFAULT 'available',
-    trigger_text TEXT NOT NULL,
-    lesson_text TEXT NOT NULL,
-    required_controls_json JSON NOT NULL,
-    required_evidence_json JSON NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    started_at TIMESTAMP NULL DEFAULT NULL,
-    resolved_at TIMESTAMP NULL DEFAULT NULL,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_incident_events_user_key (user_id, incident_key),
-    KEY idx_incident_events_user_status (user_id, status),
-    CONSTRAINT fk_incident_events_user
-        FOREIGN KEY (user_id) REFERENCES users (id)
-        ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS timeline_events (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id INT UNSIGNED NOT NULL,

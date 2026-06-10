@@ -25,6 +25,7 @@ $factory = new ConnectionFactory($config);
 $pdo = $factory->pdo();
 
 resetDatabase($pdo, $root);
+assertTrue($pdo->query("SHOW TABLES LIKE 'incident_events'")->fetchColumn() === false, 'incident_events table is not part of the current schema');
 
 $auth = new AuthService($factory, new SessionManager($config), $config);
 $game = new GameStateService($factory, new AuditScoringService());
@@ -37,7 +38,7 @@ assertTrue(count($initial['map']['objects']) === 10, 'initial office has ten int
 assertTrue(count($initial['isms']['assets']) === 8, 'initial ISMS inventory has eight assets');
 assertTrue(count($initial['isms']['risks']) === 6, 'initial risk register has six risks');
 assertTrue(count($initial['isms']['evidence']) === 8, 'initial evidence checklist has eight items');
-assertTrue(count($initial['teaching']['incidents']) === 3, 'initial scenario has three incident drills');
+assertTrue(count($initial['teaching']['incidents']) === 3, 'initial scenario has three simulation events');
 assertTrue(count($initial['teaching']['corrective_actions']) === 0, 'initial scenario has no corrective actions');
 assertTrue(count($initial['timeline']['events']) === 0, 'initial timeline has no generated event instances');
 assertTrue($initial['score']['overall']['percent'] < 60, 'initial scenario starts with visible gaps');
@@ -165,7 +166,7 @@ $pdo->exec('UPDATE timeline_states SET last_advanced_at = UTC_TIMESTAMP() - INTE
 $timelineAdvanced = $game->stateForUser($timelineUser);
 assertTrue($timelineAdvanced['timeline']['active_count'] === 1, 'offline progression creates one active timeline event');
 assertTrue(count($timelineAdvanced['timeline']['events']) === 1, 'offline progression is bounded to one event');
-assertTrue($timelineAdvanced['teaching']['incidents'][0]['status'] === 'active', 'offline progression activates the next available incident');
+assertTrue($timelineAdvanced['teaching']['incidents'][0]['status'] === 'active', 'offline progression activates the next available event');
 assertTrue(count($timelineAdvanced['teaching']['corrective_actions']) === 1, 'offline progression creates a corrective action for the event');
 $timelineRepeated = $game->stateForUser($timelineUser);
 assertTrue(count($timelineRepeated['timeline']['events']) === 1, 'repeated game-state reads do not duplicate offline events');

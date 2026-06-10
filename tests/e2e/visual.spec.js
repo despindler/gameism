@@ -161,9 +161,9 @@ test('authenticated office simulation renders and main workflow works', async ({
 
   await page.getByRole('tab', { name: 'Office' }).click();
   await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible();
-  await page.getByRole('button', { name: 'Start drill' }).first().click();
-  await expect(page.getByText('Incident drill started.')).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Close phishing drill gaps|Prove containment|Make backup recovery/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Start event' }).first().click();
+  await expect(page.getByText('Timeline event started.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Close phishing event gaps|Prove containment|Make backup recovery/ })).toBeVisible();
   await expect(page.locator('#operations-impacts')).toContainText('Current mitigation');
   await page.getByRole('button', { name: 'Timeline' }).click();
   await expect(drawer.locator('#timeline-list')).toContainText(/Phishing attempt|Lost nurse laptop|Backup restore failure/);

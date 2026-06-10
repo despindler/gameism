@@ -1,6 +1,6 @@
 # ISMS Office
 
-ISMS Office is a small browser simulation for setting up a physician office with auditable information security controls. The current MVP includes local username/password authentication, a canvas floor plan, clickable workplace assets, control toggles, readiness scoring, an ISMS workbench, incident drills, corrective actions, and a simulated audit report.
+ISMS Office is a small browser simulation for setting up a physician office with auditable information security controls. The current MVP includes local username/password authentication, a canvas floor plan, clickable workplace assets, control toggles, readiness scoring, an ISMS workbench, timeline events, corrective actions, and a simulated audit report.
 
 ## Structure
 
@@ -33,13 +33,13 @@ After login, the player configures a small physician office from the floor plan 
 - Floor-plan view modes overlay readiness, evidence, risk, and audit status directly on each clickable asset.
 - Floor-plan assets open a device profile modal with linked controls, risks, evidence, findings, and corrective actions.
 - Device configuration happens inside the modal instead of a permanent side panel.
-- The Office tab also includes an Operations section for incident drills and corrective actions.
+- The Office tab also includes an Operations section for simulation events and corrective actions.
 - Inventory items track owners, classification, criticality, and verification status.
 - Risk register items track likelihood, impact, owner, and treatment status.
 - Evidence items track whether audit evidence is missing, draft, ready, or reviewed.
-- Incident drills create durable timeline events and linked corrective actions.
+- Simulation events are persisted as durable timeline events and create linked corrective actions.
 - Offline timeline progression can activate a bounded number of events when the player returns after enough elapsed time.
-- Corrective actions must be completed and verified before related drills can be resolved.
+- Corrective actions must be completed and verified before related active events can be resolved.
 - Readiness scores combine controls and ISMS artifacts across security, documentation, resilience, and audit categories.
 - The simulated audit report samples missing controls, untreated risks, unverified assets, incomplete evidence, and operational consequences from timeline events.
 
