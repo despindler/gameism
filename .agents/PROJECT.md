@@ -318,3 +318,39 @@ Next steps:
 - Add persistent objective focus or dismissal for guidance cards.
 - Add auditor-role views that inspect evidence samples and interview prompts.
 - Move floor-plan overlay definitions into scenario metadata when multiple scenarios are introduced.
+
+## UI Phase 7 - Main Workflow Navigation Simplification
+
+Date: 2026-06-10
+
+Goal: Make the player-facing UI sequence match the core role loop: administer the office, maintain the ISMS, then run an audit.
+
+What changed:
+
+- Replaced the four top-level tabs with `Office`, `ISMS`, and `Audit`.
+- Removed `Teaching` as a peer top-level tab.
+- Re-homed incident drills and corrective actions into an Office `Operations` section.
+- Renamed the simulated audit view from `Audits` to singular `Audit`.
+- Removed the internal-audit stepper and button from the visible frontend while leaving backend mechanics in place for a later simplification/refactor milestone.
+- Updated advisor actions so incident and corrective-action guidance routes to Office Operations, and audit guidance routes to Audit.
+- Updated README and Playwright visual smoke coverage for the new navigation model.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- Internal-audit backend routes, persistence, and PHP smoke coverage remain for now; removing or merging them belongs to the later audit-simplification milestone.
+- The Operations section is still a transitional home. A right-side Timeline/Advisor drawer is planned next.
+- The game state still uses the `teaching` key for incidents and corrective actions until the event model is reshaped.
+
+Next steps:
+
+- Add the right-side drawer shell for Timeline and Advisor.
+- Introduce operational state metrics for whether the office can function during incidents.
+- Replace manual incident drills with timeline event instances.

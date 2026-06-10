@@ -91,8 +91,7 @@
         <nav id="primary-tabs" class="primary-tabs" role="tablist" aria-label="Main game views">
             <button id="tab-office" class="active" type="button" role="tab" aria-selected="true" aria-controls="panel-office" data-primary-tab="office">Office</button>
             <button id="tab-isms" type="button" role="tab" aria-selected="false" aria-controls="panel-isms" data-primary-tab="isms">ISMS</button>
-            <button id="tab-teaching" type="button" role="tab" aria-selected="false" aria-controls="panel-teaching" data-primary-tab="teaching">Teaching</button>
-            <button id="tab-audits" type="button" role="tab" aria-selected="false" aria-controls="panel-audits" data-primary-tab="audits">Audits</button>
+            <button id="tab-audit" type="button" role="tab" aria-selected="false" aria-controls="panel-audit" data-primary-tab="audit">Audit</button>
         </nav>
 
         <section id="guidance-panel" class="guidance-panel" aria-label="Guidance hints">
@@ -130,6 +129,25 @@
                     <div id="findings-list"></div>
                 </section>
             </section>
+
+            <section class="teaching-panel office-operations" aria-label="Office operations">
+                <header class="panel-heading">
+                    <div>
+                        <h2>Operations</h2>
+                        <p id="teaching-score-summary" class="asset-type"></p>
+                    </div>
+                </header>
+                <div class="teaching-grid operations-grid">
+                    <section>
+                        <h3>Incident Drills</h3>
+                        <div id="incident-list" class="teaching-list"></div>
+                    </section>
+                    <section>
+                        <h3>Corrective Actions</h3>
+                        <div id="corrective-action-list" class="teaching-list"></div>
+                    </section>
+                </div>
+            </section>
         </section>
 
         <section id="panel-isms" class="tab-panel" role="tabpanel" aria-labelledby="tab-isms" data-tab-panel="isms" hidden>
@@ -149,45 +167,18 @@
         </section>
         </section>
 
-        <section id="panel-teaching" class="tab-panel" role="tabpanel" aria-labelledby="tab-teaching" data-tab-panel="teaching" hidden>
-        <section class="teaching-panel" aria-label="Teaching loop">
-            <header class="panel-heading">
-                <div>
-                    <h2>Teaching Loop</h2>
-                    <p id="teaching-score-summary" class="asset-type"></p>
-                </div>
-                <button id="run-internal-audit" type="button">Internal audit</button>
-            </header>
-            <div id="internal-audit-stepper" class="process-stepper" aria-label="Internal audit process"></div>
-            <div class="teaching-grid">
-                <section>
-                    <h3>Incident Drills</h3>
-                    <div id="incident-list" class="teaching-list"></div>
-                </section>
-                <section>
-                    <h3>Corrective Actions</h3>
-                    <div id="corrective-action-list" class="teaching-list"></div>
-                </section>
-                <section>
-                    <h3>Internal Audit</h3>
-                    <div id="internal-audit-summary" class="teaching-list"></div>
-                </section>
-            </div>
-        </section>
-        </section>
-
-        <section id="panel-audits" class="tab-panel" role="tabpanel" aria-labelledby="tab-audits" data-tab-panel="audits" hidden>
+        <section id="panel-audit" class="tab-panel" role="tabpanel" aria-labelledby="tab-audit" data-tab-panel="audit" hidden>
             <section class="audit-panel audit-workspace">
                 <header class="panel-heading">
                     <div>
-                        <h2>Audits</h2>
-                        <p class="asset-type">Run certification-style checks and review the latest simulated report.</p>
+                        <h2>Audit</h2>
+                        <p class="asset-type">Run a simulated audit and review the latest report.</p>
                     </div>
-                    <button id="run-audit" type="button">Certification audit</button>
+                    <button id="run-audit" type="button">Run audit</button>
                 </header>
-                <div id="certification-stepper" class="process-stepper" aria-label="Certification preparation process"></div>
+                <div id="certification-stepper" class="process-stepper" aria-label="Audit preparation process"></div>
                 <div id="audit-panel-body" class="audit-panel-body">
-                    <p class="empty-state">Run a certification audit to generate a simulated auditor report.</p>
+                    <p class="empty-state">Run an audit to generate a simulated auditor report.</p>
                 </div>
             </section>
         </section>

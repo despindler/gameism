@@ -792,6 +792,10 @@ label {
     padding: 14px 16px 16px;
 }
 
+.operations-grid {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+}
+
 .teaching-grid h3 {
     margin: 0 0 10px;
     font-size: 0.96rem;

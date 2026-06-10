@@ -1,6 +1,6 @@
 # ISMS Office
 
-ISMS Office is a small browser simulation for setting up a physician office with auditable information security controls. The current MVP includes local username/password authentication, a canvas floor plan, clickable workplace assets, control toggles, readiness scoring, an ISMS workbench, incident drills, corrective actions, internal audits, and a simulated certification audit report.
+ISMS Office is a small browser simulation for setting up a physician office with auditable information security controls. The current MVP includes local username/password authentication, a canvas floor plan, clickable workplace assets, control toggles, readiness scoring, an ISMS workbench, incident drills, corrective actions, and a simulated audit report.
 
 ## Structure
 
@@ -25,19 +25,19 @@ When updating an existing deployment, run the latest `database/schema.sql` and `
 
 After login, the player configures a small physician office from the floor plan and the ISMS workbench:
 
-- The main application is organized into `Office`, `ISMS`, `Teaching`, and `Audits` tabs.
+- The main application is organized into `Office`, `ISMS`, and `Audit` tabs.
 - A compact advisor strip shows state-driven guidance hints and direct actions for the next useful work.
-- Internal audit and certification-prep steppers show where the player is in each review workflow.
+- An audit-prep stepper shows where the player is in the review workflow.
 - The Office tab shows a schematic physician-office floor plan with rooms, an aisle, doors, furniture, and type-specific device drawings.
 - Floor-plan view modes overlay readiness, evidence, risk, and audit status directly on each clickable asset.
 - Floor-plan assets open a device profile modal with linked controls, risks, evidence, findings, and corrective actions.
 - Device configuration happens inside the modal instead of a permanent side panel.
+- The Office tab also includes an Operations section for incident drills and corrective actions.
 - Inventory items track owners, classification, criticality, and verification status.
 - Risk register items track likelihood, impact, owner, and treatment status.
 - Evidence items track whether audit evidence is missing, draft, ready, or reviewed.
 - Incident drills create practical teaching situations and linked corrective actions.
 - Corrective actions must be completed and verified before related drills can be resolved.
-- Internal audits sample current gaps and create corrective actions from the highest-priority findings.
 - Readiness scores combine controls and ISMS artifacts across security, documentation, resilience, and audit categories.
 - The simulated audit report samples missing controls, untreated risks, unverified assets, and incomplete evidence.
 
@@ -78,4 +78,4 @@ npx playwright install chromium
 npm run test:visual
 ```
 
-The Playwright test uses `site/.env.test`, resets the configured disposable database through `tests/seed_visual.php`, starts the PHP built-in server with `GAMEISM_ENV_FILE=site/.env.test`, logs in as a seeded user, checks the guidance advisor, checks that the canvas is nonblank and includes the richer floor-plan layers, verifies floor-plan overlay modes, exercises the device profile/configuration modal, and checks the ISMS, Teaching Loop, internal-audit stepper, certification-prep stepper, and Audits tab.
+The Playwright test uses `site/.env.test`, resets the configured disposable database through `tests/seed_visual.php`, starts the PHP built-in server with `GAMEISM_ENV_FILE=site/.env.test`, logs in as a seeded user, checks the guidance advisor, checks that the canvas is nonblank and includes the richer floor-plan layers, verifies floor-plan overlay modes, exercises the device profile/configuration modal, and checks the ISMS, Operations, audit-prep stepper, and Audit views.

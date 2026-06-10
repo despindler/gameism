@@ -1,6 +1,6 @@
 const { expect, test } = require('@playwright/test');
 
-test('authenticated office simulation renders and teaching loop works', async ({ page }) => {
+test('authenticated office simulation renders and main workflow works', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle('ISMS Office');
   await expect(page.locator('#login-form')).toBeVisible();
@@ -18,6 +18,9 @@ test('authenticated office simulation renders and teaching loop works', async ({
   await expect(page.locator('#game-view')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Northbridge Family Practice' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Office' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'ISMS' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Audit' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Teaching' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Guidance' })).toBeVisible();
   await expect(page.getByText('Harden Reception PC')).toBeVisible();
   await page.getByRole('button', { name: 'Configure Reception PC' }).click();
@@ -28,7 +31,7 @@ test('authenticated office simulation renders and teaching loop works', async ({
   await expect(guidanceDialog).toBeHidden();
   await expect(page.locator('#office-canvas')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'ISMS Workbench' })).toBeHidden();
-  await expect(page.getByRole('heading', { name: 'Teaching Loop' })).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible();
 
   const canvasBox = await page.locator('#office-canvas').boundingBox();
   expect(canvasBox.width).toBeGreaterThan(300);
@@ -143,28 +146,19 @@ test('authenticated office simulation renders and teaching loop works', async ({
   await page.getByRole('button', { name: 'Evidence', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Backup restore test result' })).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Teaching' }).click();
-  await expect(page.getByRole('heading', { name: 'Teaching Loop' })).toBeVisible();
-  await expect(page.locator('#internal-audit-stepper')).toContainText('Prepare scope');
-  await expect(page.locator('#internal-audit-stepper')).toContainText('Sample gaps');
-  await expect(page.locator('#internal-audit-stepper')).toContainText('Correct actions');
-  await expect(page.locator('#internal-audit-stepper')).toContainText('Management review');
+  await page.getByRole('tab', { name: 'Office' }).click();
+  await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible();
   await page.getByRole('button', { name: 'Start drill' }).first().click();
   await expect(page.getByText('Incident drill started.')).toBeVisible();
   await expect(page.getByRole('heading', { name: /Close phishing drill gaps|Prove containment|Make backup recovery/ })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Internal audit' }).click();
-  await expect(page.getByText('Internal audit completed.')).toBeVisible();
-  await expect(page.locator('#internal-audit-stepper')).toContainText('findings sampled');
-  await expect(page.getByText('corrective actions created from this sample')).toBeVisible();
-
-  await page.getByRole('tab', { name: 'Audits' }).click();
-  await expect(page.getByRole('heading', { name: 'Audits' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Audit' }).click();
+  await expect(page.getByRole('heading', { name: 'Audit', exact: true })).toBeVisible();
   await expect(page.locator('#certification-stepper')).toContainText('Evidence pack');
   await expect(page.locator('#certification-stepper')).toContainText('Risk treatment');
   await expect(page.locator('#certification-stepper')).toContainText('Readiness gate');
   await expect(page.locator('#certification-stepper')).toContainText('Certification check');
-  await page.getByRole('button', { name: 'Certification audit' }).click();
+  await page.getByRole('button', { name: 'Run audit' }).click();
   await expect(page.getByText('Audit report created.')).toBeVisible();
   await expect(page.locator('#certification-stepper')).toContainText('major');
   await expect(page.getByRole('heading', { name: 'Simulated Audit Report' })).toBeVisible();

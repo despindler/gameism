@@ -34,7 +34,6 @@
         scoreResilience: document.getElementById('score-resilience'),
         scoreAudit: document.getElementById('score-audit'),
         runAudit: document.getElementById('run-audit'),
-        runInternalAudit: document.getElementById('run-internal-audit'),
         logout: document.getElementById('logout'),
         primaryTabs: document.getElementById('primary-tabs'),
         guidancePanel: document.getElementById('guidance-panel'),
@@ -51,8 +50,6 @@
         teachingScoreSummary: document.getElementById('teaching-score-summary'),
         incidentList: document.getElementById('incident-list'),
         correctiveActionList: document.getElementById('corrective-action-list'),
-        internalAuditSummary: document.getElementById('internal-audit-summary'),
-        internalAuditStepper: document.getElementById('internal-audit-stepper'),
         certificationStepper: document.getElementById('certification-stepper'),
         auditPanelBody: document.getElementById('audit-panel-body'),
         toast: document.getElementById('toast'),
@@ -244,8 +241,8 @@
         drawOffice();
         renderFindings();
         renderIsmsPanel();
-        renderTeachingPanel();
-        renderAuditsPanel();
+        renderOperationsPanel();
+        renderAuditPanel();
         renderDeviceModal();
     }
 
@@ -341,7 +338,7 @@
                 tone: 'warning',
                 title: 'Close corrective actions',
                 body: `${openActions.length} corrective actions still need completion or effectiveness checks.`,
-                action: 'open-teaching',
+                action: 'open-operations',
                 buttonText: 'Actions',
                 buttonLabel: 'Open corrective actions',
             });
@@ -354,18 +351,18 @@
                 tone: 'warning',
                 title: 'Resolve active drill',
                 body: `${activeIncident.title} is running. Finish evidence and action checks before resolving it.`,
-                action: 'open-teaching',
-                buttonText: 'Teaching',
+                action: 'open-operations',
+                buttonText: 'Operations',
                 buttonLabel: 'Open active drill',
             });
         } else if (availableIncident) {
             items.push({
                 tone: 'ready',
-                title: 'Run a teaching drill',
+                title: 'Run an incident drill',
                 body: `${availableIncident.title} can turn current gaps into corrective-action practice.`,
-                action: 'open-teaching',
-                buttonText: 'Teaching',
-                buttonLabel: 'Open teaching drills',
+                action: 'open-operations',
+                buttonText: 'Operations',
+                buttonLabel: 'Open incident drills',
             });
         }
 
@@ -373,13 +370,13 @@
             const auditReady = state.game.score.overall.percent >= 85;
             items.push({
                 tone: auditReady ? 'ready' : 'warning',
-                title: auditReady ? 'Try certification audit' : 'Sample gaps internally',
+                title: auditReady ? 'Try the audit' : 'Prepare before audit',
                 body: auditReady
-                    ? 'Readiness is high enough to attempt a simulated certification-style audit.'
-                    : 'Run an internal audit to sample current gaps and create focused corrective actions.',
-                action: auditReady ? 'open-audits' : 'open-teaching',
-                buttonText: auditReady ? 'Audits' : 'Teaching',
-                buttonLabel: auditReady ? 'Open certification audit' : 'Open internal audit',
+                    ? 'Readiness is high enough to attempt a simulated audit.'
+                    : 'Use the office findings, risks, evidence, and corrective actions to improve readiness.',
+                action: auditReady ? 'open-audit' : 'open-operations',
+                buttonText: auditReady ? 'Audit' : 'Operations',
+                buttonLabel: auditReady ? 'Open audit' : 'Open operations',
             });
         }
 
@@ -1435,11 +1432,10 @@
         }
     }
 
-    function renderTeachingPanel() {
+    function renderOperationsPanel() {
         const teaching = state.game.teaching;
         const scores = state.game.score.teaching;
         els.teachingScoreSummary.textContent = `Incidents ${scores.incidents.percent}% - Corrective actions ${scores.corrective_actions.percent}%`;
-        els.internalAuditStepper.innerHTML = renderProcessStepper(internalAuditSteps());
 
         els.incidentList.innerHTML = teaching.incidents.length
             ? teaching.incidents.map(renderIncidentCard).join('')
@@ -1449,16 +1445,15 @@
             ? teaching.corrective_actions.map(renderCorrectiveActionCard).join('')
             : '<p class="empty-state">No corrective actions have been opened.</p>';
 
-        els.internalAuditSummary.innerHTML = renderInternalAuditSummary(teaching.latest_internal_audit);
-        bindTeachingControls();
+        bindOperationsControls();
     }
 
-    function renderAuditsPanel() {
+    function renderAuditPanel() {
         const report = state.lastReport || normalizeLatestCertificationAudit(state.game.latest_audit);
         els.certificationStepper.innerHTML = renderProcessStepper(certificationPrepSteps(report));
 
         if (!report) {
-            els.auditPanelBody.innerHTML = '<p class="empty-state">Run a certification audit to generate a simulated auditor report.</p>';
+            els.auditPanelBody.innerHTML = '<p class="empty-state">Run an audit to generate a simulated auditor report.</p>';
             return;
         }
 
@@ -1475,7 +1470,7 @@
             overall_percent: report.score.overall_percent,
             major_findings: report.score.major_findings,
             minor_findings: report.score.minor_findings,
-            summary: 'Latest saved certification-style audit report.',
+            summary: 'Latest saved simulated audit report.',
             sampled_findings: report.findings || [],
         };
     }
@@ -1490,52 +1485,6 @@
                 </div>
             </article>
         `).join('');
-    }
-
-    function internalAuditSteps() {
-        const activeIncidents = state.game.teaching.incidents.filter((incident) => incident.status === 'active').length;
-        const openActions = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
-        const hasAudit = Boolean(state.game.teaching.latest_internal_audit);
-        const auditFindings = hasAudit ? (state.game.teaching.latest_internal_audit.findings || []).length : 0;
-        const prepComplete = hasAudit || (state.game.findings.length <= 8 && activeIncidents === 0);
-        const actionsComplete = hasAudit && openActions === 0;
-        const reportClean = hasAudit && auditFindings === 0 && openActions === 0;
-        const activeDrillText = activeIncidents === 1
-            ? '1 active drill should be closed before sampling.'
-            : `${activeIncidents} active drills should be closed before sampling.`;
-
-        return markCurrentStep([
-            {
-                title: 'Prepare scope',
-                detail: hasAudit
-                    ? 'Scope was sampled in the latest internal audit.'
-                    : activeIncidents > 0
-                        ? activeDrillText
-                        : `${state.game.findings.length} current findings available for sampling.`,
-                done: prepComplete,
-            },
-            {
-                title: 'Sample gaps',
-                detail: hasAudit
-                    ? `${auditFindings} findings sampled in the latest internal audit.`
-                    : 'Run internal audit to sample controls, evidence, and actions.',
-                done: hasAudit,
-            },
-            {
-                title: 'Correct actions',
-                detail: openActions > 0
-                    ? `${openActions} corrective actions still need closure or effectiveness checks.`
-                    : 'Corrective actions are closed or none have been opened.',
-                done: actionsComplete,
-            },
-            {
-                title: 'Management review',
-                detail: reportClean
-                    ? 'Internal audit is clean enough for review evidence.'
-                    : 'Review sampled findings and record improvement decisions.',
-                done: reportClean,
-            },
-        ]);
     }
 
     function certificationPrepSteps(report) {
@@ -1575,7 +1524,7 @@
                 title: 'Certification check',
                 detail: hasAuditReport
                     ? `${statusLabel(report.status)} with ${report.major_findings} major and ${report.minor_findings} minor findings.`
-                    : 'Run certification audit after the preparation gates are clear.',
+                    : 'Run the audit after the preparation gates are clear.',
                 done: auditPassed,
             },
         ]);
@@ -1637,31 +1586,6 @@
         `;
     }
 
-    function renderInternalAuditSummary(report) {
-        if (!report) {
-            return '<p class="empty-state">Run an internal audit to sample current gaps and create corrective actions.</p>';
-        }
-
-        const findings = report.findings || [];
-
-        return `
-            <article class="teaching-card">
-                <header>
-                    <h4>${escapeHtml(statusLabel(report.status))}</h4>
-                    <span class="status-badge ${escapeAttr(report.status === 'passed' ? 'ready' : 'needs_attention')}">${escapeHtml(String(report.score.overall.percent))}%</span>
-                </header>
-                <div class="artifact-meta">${escapeHtml(report.scope)}</div>
-                <p class="control-description">${report.corrective_actions_created} corrective actions created from this sample.</p>
-                ${findings.length ? findings.slice(0, 4).map((finding) => `
-                    <article class="finding-item">
-                        <div class="finding-title">${escapeHtml(finding.title)}</div>
-                        <div class="finding-meta">${escapeHtml(finding.object_name)} - ${escapeHtml(finding.severity)}</div>
-                    </article>
-                `).join('') : '<p class="empty-state">No internal audit findings.</p>'}
-            </article>
-        `;
-    }
-
     function selectActionControl(actionKey, field, value, options) {
         const optionHtml = options.map(([optionValue, label]) => `
             <option value="${escapeAttr(optionValue)}" ${String(value) === String(optionValue) ? 'selected' : ''}>${escapeHtml(label)}</option>
@@ -1695,7 +1619,7 @@
         `;
     }
 
-    function bindTeachingControls() {
+    function bindOperationsControls() {
         for (const button of els.incidentList.querySelectorAll('[data-incident-action]')) {
             button.addEventListener('click', () => {
                 updateIncident(button.dataset.incidentAction, button.dataset.incidentKey);
@@ -1825,30 +1749,9 @@
         }
     }
 
-    async function runInternalAudit() {
-        if (state.busy) {
-            return;
-        }
-
-        state.busy = true;
-        els.runInternalAudit.disabled = true;
-
-        try {
-            const payload = await api('run-internal-audit', { method: 'POST' });
-            state.game = payload.game_state;
-            showToast('Internal audit completed.');
-        } catch (error) {
-            showToast(error.message);
-        } finally {
-            state.busy = false;
-            els.runInternalAudit.disabled = false;
-            render();
-        }
-    }
-
     function renderAudit(report) {
         state.lastReport = report;
-        setPrimaryTab('audits');
+        setPrimaryTab('audit');
         els.auditPanelBody.innerHTML = renderCertificationReport(report);
     }
 
@@ -1908,13 +1811,13 @@
             return;
         }
 
-        if (action === 'open-teaching') {
-            setPrimaryTab('teaching');
+        if (action === 'open-operations') {
+            setPrimaryTab('office');
             return;
         }
 
-        if (action === 'open-audits') {
-            setPrimaryTab('audits');
+        if (action === 'open-audit') {
+            setPrimaryTab('audit');
         }
     }
 
@@ -2055,7 +1958,6 @@
     });
 
     els.runAudit.addEventListener('click', runAudit);
-    els.runInternalAudit.addEventListener('click', runInternalAudit);
 
     els.primaryTabs.addEventListener('click', (event) => {
         const button = event.target.closest('[data-primary-tab]');
