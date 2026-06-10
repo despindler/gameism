@@ -84,6 +84,10 @@
                 </div>
             </div>
             <div class="topbar-actions">
+                <button id="drawer-toggle" type="button" aria-haspopup="dialog" aria-controls="info-drawer" aria-expanded="false">
+                    <span>Timeline</span>
+                    <span id="drawer-badge" class="drawer-badge" hidden>0</span>
+                </button>
                 <button id="logout" type="button">Sign out</button>
             </div>
         </header>
@@ -93,17 +97,6 @@
             <button id="tab-isms" type="button" role="tab" aria-selected="false" aria-controls="panel-isms" data-primary-tab="isms">ISMS</button>
             <button id="tab-audit" type="button" role="tab" aria-selected="false" aria-controls="panel-audit" data-primary-tab="audit">Audit</button>
         </nav>
-
-        <section id="guidance-panel" class="guidance-panel" aria-label="Guidance hints">
-            <header>
-                <div>
-                    <p class="eyebrow">Advisor</p>
-                    <h2>Guidance</h2>
-                </div>
-                <p id="guidance-summary" class="asset-type"></p>
-            </header>
-            <div id="guidance-list" class="guidance-list"></div>
-        </section>
 
         <section id="panel-office" class="tab-panel active" role="tabpanel" aria-labelledby="tab-office" data-tab-panel="office">
             <section class="workspace">
@@ -184,6 +177,37 @@
         </section>
 
         <div id="toast" class="toast" hidden></div>
+
+        <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
+        <aside id="info-drawer" class="info-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+            <header class="drawer-header">
+                <div>
+                    <p class="eyebrow">Simulation Feed</p>
+                    <h2 id="drawer-title">Timeline</h2>
+                </div>
+                <button id="drawer-close" class="icon-button" type="button" aria-label="Close timeline drawer">x</button>
+            </header>
+            <div id="drawer-tabs" class="drawer-tabs" role="tablist" aria-label="Drawer views">
+                <button id="drawer-tab-timeline" class="active" type="button" role="tab" aria-selected="true" aria-controls="drawer-panel-timeline" data-drawer-tab="timeline">Timeline</button>
+                <button id="drawer-tab-advisor" type="button" role="tab" aria-selected="false" aria-controls="drawer-panel-advisor" data-drawer-tab="advisor">Advisor</button>
+            </div>
+            <section id="drawer-panel-timeline" class="drawer-panel active" role="tabpanel" aria-labelledby="drawer-tab-timeline" data-drawer-panel="timeline">
+                <p id="timeline-summary" class="asset-type"></p>
+                <div id="timeline-list" class="timeline-list"></div>
+            </section>
+            <section id="drawer-panel-advisor" class="drawer-panel" role="tabpanel" aria-labelledby="drawer-tab-advisor" data-drawer-panel="advisor" hidden>
+                <section id="guidance-panel" class="guidance-panel" aria-label="Guidance hints">
+                    <header>
+                        <div>
+                            <p class="eyebrow">Advisor</p>
+                            <h2>Guidance</h2>
+                        </div>
+                        <p id="guidance-summary" class="asset-type"></p>
+                    </header>
+                    <div id="guidance-list" class="guidance-list"></div>
+                </section>
+            </section>
+        </aside>
 
         <div id="device-modal" class="modal-backdrop" hidden>
             <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="device-modal-title">

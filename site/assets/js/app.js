@@ -13,6 +13,9 @@
         activeIsmsTab: 'assets',
         activePrimaryTab: 'office',
         activeMapMode: 'overview',
+        activeDrawerTab: 'timeline',
+        drawerOpen: false,
+        drawerOpener: null,
         deviceModalOpen: false,
         deviceModalMode: 'profile',
         registrationEnabled: true,
@@ -34,6 +37,16 @@
         scoreResilience: document.getElementById('score-resilience'),
         scoreAudit: document.getElementById('score-audit'),
         runAudit: document.getElementById('run-audit'),
+        drawerToggle: document.getElementById('drawer-toggle'),
+        drawerBadge: document.getElementById('drawer-badge'),
+        drawerBackdrop: document.getElementById('drawer-backdrop'),
+        infoDrawer: document.getElementById('info-drawer'),
+        drawerTitle: document.getElementById('drawer-title'),
+        drawerClose: document.getElementById('drawer-close'),
+        drawerTabs: document.getElementById('drawer-tabs'),
+        drawerPanels: document.querySelectorAll('[data-drawer-panel]'),
+        timelineSummary: document.getElementById('timeline-summary'),
+        timelineList: document.getElementById('timeline-list'),
         logout: document.getElementById('logout'),
         primaryTabs: document.getElementById('primary-tabs'),
         guidancePanel: document.getElementById('guidance-panel'),
@@ -189,6 +202,7 @@
     }
 
     function showAuth(message = '') {
+        closeDrawer();
         els.authView.hidden = false;
         els.gameView.hidden = true;
         setAuthMode('login');
@@ -237,6 +251,8 @@
 
         renderHud();
         renderGuidance();
+        renderTimeline();
+        renderDrawerBadge();
         renderMapModeControls();
         drawOffice();
         renderFindings();
@@ -285,6 +301,68 @@
                 <button class="secondary" type="button" data-guidance-action="${escapeAttr(item.action)}" data-guidance-target="${escapeAttr(item.target || '')}" aria-label="${escapeAttr(item.buttonLabel)}">${escapeHtml(item.buttonText)}</button>
             </article>
         `).join('');
+    }
+
+    function renderTimeline() {
+        const items = timelineItems();
+        const activeCount = state.game.teaching.incidents.filter((incident) => incident.status === 'active').length;
+        const openActionCount = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
+        els.timelineSummary.textContent = `${activeCount} active incidents - ${openActionCount} open corrective actions`;
+
+        els.timelineList.innerHTML = items.map((item) => `
+            <article class="timeline-card ${escapeAttr(item.tone)}">
+                <span class="timeline-meta">${escapeHtml(item.meta)}</span>
+                <h3>${escapeHtml(item.title)}</h3>
+                <p>${escapeHtml(item.body)}</p>
+            </article>
+        `).join('');
+    }
+
+    function renderDrawerBadge() {
+        const activeIncidents = state.game.teaching.incidents.filter((incident) => incident.status === 'active').length;
+        const openActions = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
+        const priorityGuidance = guidanceItems().filter((item) => item.tone === 'critical' || item.tone === 'warning').length;
+        const badgeCount = activeIncidents + openActions + priorityGuidance;
+
+        els.drawerBadge.hidden = badgeCount === 0;
+        els.drawerBadge.textContent = String(Math.min(badgeCount, 9));
+    }
+
+    function timelineItems() {
+        const items = [];
+
+        for (const incident of state.game.teaching.incidents) {
+            const statusText = incident.status === 'available'
+                ? incident.trigger_text
+                : incident.lesson_text;
+
+            items.push({
+                tone: incident.status,
+                meta: `Incident - ${incident.status}`,
+                title: incident.title,
+                body: statusText,
+            });
+        }
+
+        for (const action of state.game.teaching.corrective_actions) {
+            items.push({
+                tone: 'action',
+                meta: `Corrective action - ${action.status}`,
+                title: action.title,
+                body: `${typeLabel(action.source_type)} due in ${action.due_days} days. Verification is ${action.verification_status}.`,
+            });
+        }
+
+        if (items.length === 0) {
+            items.push({
+                tone: 'empty',
+                meta: 'Timeline',
+                title: 'No events yet',
+                body: 'Incident drills and corrective actions will appear here as the office simulation becomes more active.',
+            });
+        }
+
+        return items;
     }
 
     function guidanceItems() {
@@ -1448,6 +1526,53 @@
         bindOperationsControls();
     }
 
+    function setDrawerTab(tabKey) {
+        state.activeDrawerTab = tabKey === 'advisor' ? 'advisor' : 'timeline';
+        els.drawerTitle.textContent = state.activeDrawerTab === 'advisor' ? 'Advisor' : 'Timeline';
+
+        for (const button of els.drawerTabs.querySelectorAll('[data-drawer-tab]')) {
+            const active = button.dataset.drawerTab === state.activeDrawerTab;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-selected', active ? 'true' : 'false');
+        }
+
+        for (const panel of els.drawerPanels) {
+            const active = panel.dataset.drawerPanel === state.activeDrawerTab;
+            panel.classList.toggle('active', active);
+            panel.hidden = !active;
+        }
+    }
+
+    function openDrawer(tabKey = state.activeDrawerTab || 'timeline', opener = null) {
+        state.drawerOpen = true;
+        state.drawerOpener = opener || document.activeElement;
+        els.drawerBackdrop.hidden = false;
+        els.infoDrawer.hidden = false;
+        els.drawerToggle.setAttribute('aria-expanded', 'true');
+        setDrawerTab(tabKey);
+        window.requestAnimationFrame(() => {
+            const activeTab = els.drawerTabs.querySelector(`[data-drawer-tab="${state.activeDrawerTab}"]`);
+            (activeTab || els.drawerClose).focus();
+        });
+    }
+
+    function closeDrawer() {
+        if (!state.drawerOpen) {
+            return;
+        }
+
+        state.drawerOpen = false;
+        els.drawerBackdrop.hidden = true;
+        els.infoDrawer.hidden = true;
+        els.drawerToggle.setAttribute('aria-expanded', 'false');
+
+        if (state.drawerOpener && typeof state.drawerOpener.focus === 'function') {
+            state.drawerOpener.focus();
+        }
+
+        state.drawerOpener = null;
+    }
+
     function renderAuditPanel() {
         const report = state.lastReport || normalizeLatestCertificationAudit(state.game.latest_audit);
         els.certificationStepper.innerHTML = renderProcessStepper(certificationPrepSteps(report));
@@ -1783,6 +1908,7 @@
             const objectKey = target || state.selectedKey;
 
             if (objectKey) {
+                closeDrawer();
                 setPrimaryTab('office');
                 openDeviceModal(objectKey, 'configure');
             }
@@ -1791,6 +1917,7 @@
         }
 
         if (action === 'open-evidence') {
+            closeDrawer();
             state.activeIsmsTab = 'evidence';
             setPrimaryTab('isms');
             renderIsmsPanel();
@@ -1798,6 +1925,7 @@
         }
 
         if (action === 'open-risks') {
+            closeDrawer();
             state.activeIsmsTab = 'risks';
             setPrimaryTab('isms');
             renderIsmsPanel();
@@ -1805,6 +1933,7 @@
         }
 
         if (action === 'open-inventory') {
+            closeDrawer();
             state.activeIsmsTab = 'assets';
             setPrimaryTab('isms');
             renderIsmsPanel();
@@ -1812,11 +1941,13 @@
         }
 
         if (action === 'open-operations') {
+            closeDrawer();
             setPrimaryTab('office');
             return;
         }
 
         if (action === 'open-audit') {
+            closeDrawer();
             setPrimaryTab('audit');
         }
     }
@@ -1959,6 +2090,23 @@
 
     els.runAudit.addEventListener('click', runAudit);
 
+    els.drawerToggle.addEventListener('click', () => {
+        openDrawer('timeline', els.drawerToggle);
+    });
+
+    els.drawerClose.addEventListener('click', closeDrawer);
+    els.drawerBackdrop.addEventListener('click', closeDrawer);
+
+    els.drawerTabs.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-drawer-tab]');
+
+        if (!button) {
+            return;
+        }
+
+        setDrawerTab(button.dataset.drawerTab);
+    });
+
     els.primaryTabs.addEventListener('click', (event) => {
         const button = event.target.closest('[data-primary-tab]');
 
@@ -2024,6 +2172,11 @@
     window.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && state.deviceModalOpen) {
             closeDeviceModal();
+            return;
+        }
+
+        if (event.key === 'Escape' && state.drawerOpen) {
+            closeDrawer();
         }
     });
 

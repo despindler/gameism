@@ -26,7 +26,7 @@ When updating an existing deployment, run the latest `database/schema.sql` and `
 After login, the player configures a small physician office from the floor plan and the ISMS workbench:
 
 - The main application is organized into `Office`, `ISMS`, and `Audit` tabs.
-- A compact advisor strip shows state-driven guidance hints and direct actions for the next useful work.
+- A right-side Timeline drawer shows simulation activity and an Advisor tab with state-driven guidance hints.
 - An audit-prep stepper shows where the player is in the review workflow.
 - The Office tab shows a schematic physician-office floor plan with rooms, an aisle, doors, furniture, and type-specific device drawings.
 - Floor-plan view modes overlay readiness, evidence, risk, and audit status directly on each clickable asset.
@@ -78,4 +78,4 @@ npx playwright install chromium
 npm run test:visual
 ```
 
-The Playwright test uses `site/.env.test`, resets the configured disposable database through `tests/seed_visual.php`, starts the PHP built-in server with `GAMEISM_ENV_FILE=site/.env.test`, logs in as a seeded user, checks the guidance advisor, checks that the canvas is nonblank and includes the richer floor-plan layers, verifies floor-plan overlay modes, exercises the device profile/configuration modal, and checks the ISMS, Operations, audit-prep stepper, and Audit views.
+The Playwright test uses `site/.env.test`, resets the configured disposable database through `tests/seed_visual.php`, starts the PHP built-in server with `GAMEISM_ENV_FILE=site/.env.test`, logs in as a seeded user, checks the Timeline and Advisor drawer, checks that the canvas is nonblank and includes the richer floor-plan layers, verifies floor-plan overlay modes, exercises the device profile/configuration modal, and checks the ISMS, Operations, audit-prep stepper, and Audit views.

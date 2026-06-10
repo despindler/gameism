@@ -354,3 +354,39 @@ Next steps:
 - Add the right-side drawer shell for Timeline and Advisor.
 - Introduce operational state metrics for whether the office can function during incidents.
 - Replace manual incident drills with timeline event instances.
+
+## UI Phase 8 - Timeline And Advisor Drawer Shell
+
+Date: 2026-06-10
+
+Goal: Move meta-level guidance and simulation feed items into a right-side drawer so the main workspace stays focused on Office, ISMS, and Audit.
+
+What changed:
+
+- Added a topbar Timeline button with a count badge for active incidents, open corrective actions, and priority guidance.
+- Added a right-side drawer with `Timeline` and `Advisor` tabs.
+- Moved the previous always-visible Advisor guidance strip into the drawer.
+- Added a frontend-derived Timeline feed from the current incident drills and corrective actions.
+- Added drawer open, close, tab switching, backdrop close, Escape-key close, and focus return behavior.
+- Updated Playwright coverage for desktop drawer interaction, Advisor actions, Escape close, and mobile drawer sizing.
+- Updated README to describe the Timeline/Advisor drawer.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- Timeline entries are derived from the existing `teaching` incident/corrective-action state; durable event instances are planned for the event-system milestone.
+- The drawer does not yet include difficulty controls for hiding or reducing Advisor guidance.
+- The topbar button is labeled `Timeline` for now because the feed is the primary simulation-level surface.
+
+Next steps:
+
+- Introduce operational state metrics for whether the office can function during incidents.
+- Replace manual incident drills with timeline event instances.
+- Add difficulty and guidance-visibility controls after the core event loop is stronger.

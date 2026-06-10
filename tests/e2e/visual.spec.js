@@ -21,9 +21,19 @@ test('authenticated office simulation renders and main workflow works', async ({
   await expect(page.getByRole('tab', { name: 'ISMS' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Audit' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Teaching' })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Guidance' })).toBeVisible();
-  await expect(page.getByText('Harden Reception PC')).toBeVisible();
-  await page.getByRole('button', { name: 'Configure Reception PC' }).click();
+  await page.getByRole('button', { name: 'Timeline' }).click();
+  const drawer = page.locator('#info-drawer');
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByRole('heading', { name: 'Timeline' })).toBeVisible();
+  await expect(drawer.locator('#timeline-summary')).toContainText('active incidents');
+  await page.keyboard.press('Escape');
+  await expect(drawer).toBeHidden();
+
+  await page.getByRole('button', { name: 'Timeline' }).click();
+  await drawer.getByRole('tab', { name: 'Advisor' }).click();
+  await expect(drawer.getByRole('heading', { name: 'Guidance' })).toBeVisible();
+  await expect(drawer.getByText('Harden Reception PC')).toBeVisible();
+  await drawer.getByRole('button', { name: 'Configure Reception PC' }).click();
   const guidanceDialog = page.getByRole('dialog');
   await expect(guidanceDialog).toBeVisible();
   await expect(guidanceDialog.getByText('Enable controls only when the office could demonstrate')).toBeVisible();
@@ -162,4 +172,13 @@ test('authenticated office simulation renders and main workflow works', async ({
   await expect(page.getByText('Audit report created.')).toBeVisible();
   await expect(page.locator('#certification-stepper')).toContainText('major');
   await expect(page.getByRole('heading', { name: 'Simulated Audit Report' })).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 760 });
+  await page.getByRole('button', { name: 'Timeline' }).click();
+  await expect(drawer).toBeVisible();
+  const mobileDrawerBox = await drawer.boundingBox();
+  expect(mobileDrawerBox.width).toBeLessThanOrEqual(390);
+  expect(mobileDrawerBox.width).toBeGreaterThan(320);
+  await drawer.getByRole('button', { name: 'Close timeline drawer' }).click();
+  await expect(drawer).toBeHidden();
 });
