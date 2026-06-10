@@ -1,7 +1,7 @@
 {
   "name": "gameism",
   "version": "1.0.0",
-  "description": "ISMS Office is a small browser simulation for setting up a physician office with auditable information security controls. The current MVP includes local username/password authentication, a canvas floor plan, clickable workplace assets, control toggles, readiness scoring, an ISMS workbench, incident drills, corrective actions, internal audits, and a simulated certification audit report.",
+  "description": "ISMS Office is a small browser simulation for setting up a physician office with auditable information security controls. The current MVP includes local authentication, a canvas floor plan, readiness scoring, ISMS artifacts, durable timeline events, corrective actions, operational consequences, guidance controls, and a simulated audit report.",
   "main": "index.js",
   "directories": {
     "test": "tests"

@@ -19,6 +19,8 @@ ISMS Office is a small browser simulation for setting up a physician office with
 
 The first registered user becomes `admin`. For a public deployment, set `APP_ALLOW_REGISTRATION=false` in `site/.env` after creating the initial account unless open registration is intentional.
 
+The `site/.htaccess` file protects `.env` and `site/app/` on Apache-compatible hosts and routes API requests through `index.php`. On non-Apache hosts, configure equivalent rules so only `index.php` and `assets/` are directly web-accessible.
+
 When updating an existing deployment, run the latest `database/schema.sql` and `database/seed.sql` again. The schema uses `CREATE TABLE IF NOT EXISTS`, and the seed uses upserts for application settings.
 
 ## Current Game Loop
@@ -26,21 +28,22 @@ When updating an existing deployment, run the latest `database/schema.sql` and `
 After login, the player configures a small physician office from the floor plan and the ISMS workbench:
 
 - The main application is organized into `Office`, `ISMS`, and `Audit` tabs.
-- A right-side Timeline drawer shows durable simulation events, difficulty controls, and an Advisor tab with state-driven guidance hints.
+- A topbar Help button opens a tabbed game guide covering the game goal, core layers, an end-to-end example, and component explanations.
+- A right-side drawer shows the full event Timeline, an Advisor tab with state-driven guidance hints, and a Settings tab for difficulty and timeline pacing controls.
 - An audit-prep stepper shows where the player is in the review workflow.
 - The Office tab shows a schematic physician-office floor plan with rooms, an aisle, doors, furniture, and type-specific device drawings.
-- The Office tab shows current operational function: clinical capacity, EHR availability, data availability, patient delay, exposure, and closure risk.
+- The top bar and Office tab emphasize current Office Operations: clinical capacity, EHR availability, data availability, patient delay, exposure, and closure risk.
 - Floor-plan view modes overlay readiness, evidence, risk, and audit status directly on each clickable asset.
 - Floor-plan assets open a device profile modal with linked controls, risks, evidence, findings, corrective actions, and active event context.
 - Device configuration happens inside the modal instead of a permanent side panel.
-- The Office tab also includes an Operations section for simulation events and links to their follow-up work.
+- The Timeline lists all simulation events; clicking an event opens a modal with event context, required controls/evidence, event actions, and links to follow-up work. Each Timeline row also has a three-dot menu for direct `Open event`, `Start event`, and `Open asset` actions.
 - Inventory items track owners, classification, criticality, and verification status.
 - Risk register items track likelihood, impact, owner, and treatment status.
 - Evidence items track whether audit evidence is missing, draft, ready, or reviewed.
 - Simulation events are persisted as durable timeline events, draw from a catalog of phishing, lost-device, ransomware, network-outage, cloud-account, and backup-recovery scenarios, and create linked corrective actions.
 - Corrective actions are managed in the ISMS `Actions` tab as a formal improvement register.
 - Offline timeline progression can activate a bounded number of posture-aware events when the player returns after enough elapsed time.
-- Admin users can tune timeline pacing from the Timeline drawer.
+- Admin users can tune timeline pacing from the drawer Settings tab.
 - Each player can choose Guided, Standard, or Challenge mode; Challenge hides Advisor guidance while keeping Timeline visible.
 - Corrective actions must be completed and verified before related active events can be resolved.
 - Readiness scores combine controls and ISMS artifacts across security, documentation, resilience, and audit categories.
@@ -83,4 +86,4 @@ npx playwright install chromium
 npm run test:visual
 ```
 
-The Playwright test uses `site/.env.test`, resets the configured disposable database through `tests/seed_visual.php`, starts the PHP built-in server with `GAMEISM_ENV_FILE=site/.env.test`, logs in as a seeded user, checks the Timeline and Advisor drawer, checks that the canvas is nonblank and includes the richer floor-plan layers, verifies floor-plan overlay modes, exercises the device profile/configuration modal, and checks the ISMS, Operations, audit-prep stepper, and Audit views including operational audit feedback.
+The Playwright test uses `site/.env.test`, resets the configured disposable database through `tests/seed_visual.php`, starts the PHP built-in server with `GAMEISM_ENV_FILE=site/.env.test`, logs in as a seeded user, checks the Help modal and the Timeline, Advisor, and Settings drawer tabs, checks that the canvas is nonblank and includes the richer floor-plan layers, verifies floor-plan overlay modes, exercises the device and event detail modals, and checks the ISMS, audit-prep stepper, and Audit views including operational audit feedback.

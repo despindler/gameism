@@ -403,12 +403,12 @@ What changed:
 - Added operational metrics for clinical capacity, EHR availability, data availability, patient delay, confidentiality exposure, closure risk, resilience posture, and documentation posture.
 - Derived baseline exposure and closure risk from implemented controls and ISMS artifact readiness.
 - Derived active incident impact from existing incident drill status, required controls, and required evidence.
-- Added active impact summaries for the Timeline feed and Office status panel.
-- Added an Office `Office Function` status panel above the floor plan.
+- Added active impact summaries for the Timeline feed and Office Operations panel.
+- Added an Office `Office Operations` status panel above the floor plan.
 - Added the operational status as the first Timeline feed item.
 - Updated PHP smoke tests to verify baseline operations, hardening improvements, active incident degradation, and recovery after resolution.
 - Updated Playwright coverage to verify operational metrics and active impact rendering.
-- Updated README to include the operational function panel.
+- Updated README to include the Office Operations panel.
 
 How to verify:
 
@@ -829,3 +829,77 @@ Next steps:
 - Playtest the current Office, ISMS, Timeline, and Audit loop.
 - Tune event selection and impact weights based on playtesting.
 - Decide the next product milestone after observing the current loop end to end.
+
+## Milestone 16 - Cleanup And Deployment Hardening
+
+Date: 2026-06-10
+
+Goal: Clean up stale transitional remnants and harden the current application as if the present event/simulation model had been built directly.
+
+What changed:
+
+- Removed the obsolete `game.teaching.corrective_action_due_days` seed setting and made `database/seed.sql` delete it from reused deployments.
+- Updated package metadata to describe the current timeline/event, ISMS, guidance, operations, and audit loop.
+- Added shared security headers for HTML and JSON responses.
+- Added `site/.htaccess` to deny direct Apache access to `.env` and `site/app/`, disable directory listings, and route app/API requests through `index.php`.
+- Hardened JSON request object parsing so scalar/list payload fields fail with `INVALID_REQUEST_FIELD`.
+- Hardened stored JSON decoding so corrupted scalar JSON fails with `GAME_STATE_JSON_INVALID` instead of silently becoming empty state.
+- Wrapped timeline setting updates and event/action creation in transactions.
+- Returned `CORRECTIVE_ACTION_NOT_FOUND` for missing corrective-action updates instead of the generic ISMS item error.
+- Added smoke coverage for the stale seed setting, invalid request objects, missing corrective actions, and corrupted stored JSON.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- Test reset helpers still drop removed legacy tables when present so reused local databases are cleaned safely; the current schema does not recreate those tables.
+- Apache protection is provided by `site/.htaccess`; non-Apache deployments need equivalent web-server rules.
+
+Next steps:
+
+- Run an end-to-end deployment dry run against a staging host or container with web-server rules matching production.
+- Continue playtesting the Office, ISMS, Timeline, and Audit loop before adding new product features.
+
+## UI Phase 9 - User-Centric Office And Timeline Simplification
+
+Date: 2026-06-10
+
+Goal: Refocus the player experience on maintaining Office Operations, with device configuration on the floor plan and timeline events as contextual modal drill-downs.
+
+What changed:
+
+- Made Office Performance the first top-bar KPI and kept readiness/security/resilience/audit as supporting indicators.
+- Removed the duplicated Office Operations watch entry from the Timeline.
+- Changed the Timeline drawer to list the full simulation event catalog, including available, active, and resolved events.
+- Made Timeline event cards open an event detail modal with operational context, required controls, required evidence, event actions, affected asset navigation, and linked corrective-action navigation.
+- Added a three-dot action menu to each Timeline event row for direct `Open event`, `Start event`, and `Open asset` actions.
+- Added a topbar Help button that opens a tabbed guide for the game purpose, six layers, an end-to-end example, and component explanations.
+- Removed the Office `Operations` event section below the floor plan.
+- Removed the always-visible `Open Findings` panel below the floor plan because device-specific findings already appear in the device modal and audit findings remain in the Audit tab.
+- Moved Guidance Mode and admin Timeline Settings into a dedicated drawer `Settings` tab so the Timeline tab can use the drawer height for event browsing.
+- Updated Playwright coverage for the Help modal, drawer Settings, full Timeline event listing, event modal start flow, and the absence of the removed Office panels.
+- Updated README to describe the simplified Timeline, Settings, and modal-based event workflow.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- Corrective actions remain in `ISMS > Actions`; event modals link to the relevant action rather than embedding action edit controls.
+- The Timeline now shows catalog events as the player-facing event list, while persisted timeline instances still back active/resolved event state and audit history.
+
+Next steps:
+
+- Consider adding an explicit Office Performance formula explanation to the Office Operations panel if playtesting shows players need it.
+- Consider replacing the remaining readiness score strip with a smaller secondary diagnostics row if the top bar still feels crowded.

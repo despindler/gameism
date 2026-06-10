@@ -9,6 +9,7 @@ use Gameism\Database\ConnectionFactory;
 use Gameism\Game\AuditScoringService;
 use Gameism\Game\GameStateService;
 use Gameism\Http\ApiException;
+use Gameism\Http\Request;
 
 require __DIR__ . '/../site/app/bootstrap.php';
 
@@ -27,6 +28,15 @@ $pdo = $factory->pdo();
 resetDatabase($pdo, $root);
 assertTrue($pdo->query("SHOW TABLES LIKE 'incident_events'")->fetchColumn() === false, 'incident_events table is not part of the current schema');
 assertTrue($pdo->query("SHOW TABLES LIKE 'internal_audit_reports'")->fetchColumn() === false, 'internal_audit_reports table is not part of the current schema');
+assertTrue($pdo->query("SELECT setting_key FROM app_settings WHERE setting_key = 'game.teaching.corrective_action_due_days'")->fetchColumn() === false, 'obsolete teaching setting is removed from seed data');
+
+$invalidRequestObjectRejected = false;
+try {
+    (new Request('POST', '/api/configure-object', [], ['controls' => 'not an object']))->object('controls');
+} catch (ApiException $exception) {
+    $invalidRequestObjectRejected = $exception->apiCode() === 'INVALID_REQUEST_FIELD';
+}
+assertTrue($invalidRequestObjectRejected, 'JSON object request fields reject scalar values with a stable error code');
 
 $auth = new AuthService($factory, new SessionManager($config), $config);
 $game = new GameStateService($factory, new AuditScoringService());
@@ -207,6 +217,14 @@ try {
 }
 assertTrue($invalidActionStatusRejected, 'invalid corrective action status is rejected with a stable error code');
 
+$missingActionRejected = false;
+try {
+    $game->updateCorrectiveAction($user, 'missing_action', ['status' => 'done']);
+} catch (ApiException $exception) {
+    $missingActionRejected = $exception->apiCode() === 'CORRECTIVE_ACTION_NOT_FOUND';
+}
+assertTrue($missingActionRejected, 'missing corrective action is rejected with a corrective-action-specific error code');
+
 $invalidControlRejected = false;
 try {
     $game->configureObject($user, 'isms_binder', ['not_a_control' => true]);
@@ -285,6 +303,21 @@ assertTrue($hardenedTimelineAdvanced['timeline']['active_count'] === 1, 'hardene
 assertTrue($hardenedTimelineAdvanced['simulation']['events'][0]['event_key'] !== 'ransomware_patient_data_unavailable', 'hardened recovery posture reduces ransomware event likelihood');
 assertTrue($hardenedTimelineAdvanced['operations']['closure_risk_percent'] < $timelineAdvanced['operations']['closure_risk_percent'], 'hardened offline posture reduces operational closure risk');
 assertTrue($hardenedTimelineAdvanced['timeline']['events'][0]['impact']['generation']['residual_risk_score'] < $timelineAdvanced['timeline']['events'][0]['impact']['generation']['residual_risk_score'], 'hardened offline event records lower residual risk');
+
+$corruptJsonUser = $auth->register('corrupt_json_user', 'strongpass123', 'Corrupt JSON User');
+$game->stateForUser($corruptJsonUser);
+$statement = $pdo->prepare('UPDATE office_objects SET config_json = JSON_QUOTE(:value) WHERE user_id = :user_id AND object_key = "doctor_pc"');
+$statement->execute([
+    'value' => 'not an object',
+    'user_id' => $corruptJsonUser['id'],
+]);
+$storedJsonRejected = false;
+try {
+    $game->stateForUser($corruptJsonUser);
+} catch (ApiException $exception) {
+    $storedJsonRejected = $exception->apiCode() === 'GAME_STATE_JSON_INVALID';
+}
+assertTrue($storedJsonRejected, 'stored scalar JSON is rejected instead of being treated as empty state');
 
 echo "OK: smoke tests passed.\n";
 

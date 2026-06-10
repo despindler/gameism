@@ -418,7 +418,7 @@ final class AuditScoringService
 
         if ($activeCount > 0) {
             return sprintf(
-                '%d active event%s sampled; current office function is %s.',
+                '%d active event%s sampled; current Office Operations status is %s.',
                 $activeCount,
                 $activeCount === 1 ? '' : 's',
                 str_replace('_', ' ', $status)

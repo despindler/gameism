@@ -1,5 +1,4 @@
 Options -Indexes
-DirectoryIndex index.php
 
 <FilesMatch "^\.env">
     <IfModule mod_authz_core.c>
@@ -10,13 +9,11 @@ DirectoryIndex index.php
     </IfModule>
 </FilesMatch>
 
-RedirectMatch 404 ^/(app|scripts|tests|migrations|database|\.agents|\.git)(/|$)
-
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteCond %{REQUEST_FILENAME} -f [OR]
-    RewriteCond %{REQUEST_FILENAME} -d
-    RewriteRule ^ - [L]
-    RewriteRule ^ index.php [QSA,L]
-</IfModule>
 
+    RewriteRule ^app(?:/|$) - [F,L]
+    RewriteRule ^assets/ - [L]
+    RewriteRule ^index\.php$ - [L]
+    RewriteRule ^.*$ index.php [L]
+</IfModule>

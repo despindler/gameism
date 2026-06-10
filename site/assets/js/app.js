@@ -14,10 +14,14 @@
         activePrimaryTab: 'office',
         activeMapMode: 'overview',
         activeDrawerTab: 'timeline',
+        activeHelpTab: 'game',
+        activeTimelineMenuKey: null,
         drawerOpen: false,
         drawerOpener: null,
-        deviceModalOpen: false,
-        deviceModalMode: 'profile',
+        contextModalOpen: false,
+        contextModalType: 'device',
+        contextModalMode: 'profile',
+        activeEventKey: null,
         registrationEnabled: true,
     };
 
@@ -31,12 +35,13 @@
         showLogin: document.getElementById('show-login'),
         authMessage: document.getElementById('auth-message'),
         organizationName: document.getElementById('organization-name'),
+        scoreOffice: document.getElementById('score-office'),
         scoreOverall: document.getElementById('score-overall'),
         scoreSecurity: document.getElementById('score-security'),
-        scoreDocumentation: document.getElementById('score-documentation'),
         scoreResilience: document.getElementById('score-resilience'),
         scoreAudit: document.getElementById('score-audit'),
         runAudit: document.getElementById('run-audit'),
+        helpToggle: document.getElementById('help-toggle'),
         drawerToggle: document.getElementById('drawer-toggle'),
         drawerBadge: document.getElementById('drawer-badge'),
         drawerBackdrop: document.getElementById('drawer-backdrop'),
@@ -59,7 +64,6 @@
         mapViewControls: document.getElementById('map-view-controls'),
         tabPanels: document.querySelectorAll('[data-tab-panel]'),
         canvas: document.getElementById('office-canvas'),
-        findingsList: document.getElementById('findings-list'),
         operationsStatusTitle: document.getElementById('operations-status-title'),
         operationsStatusBadge: document.getElementById('operations-status-badge'),
         operationsMetrics: document.getElementById('operations-metrics'),
@@ -67,17 +71,15 @@
         ismsTabs: document.getElementById('isms-tabs'),
         ismsBody: document.getElementById('isms-body'),
         ismsScoreSummary: document.getElementById('isms-score-summary'),
-        simulationScoreSummary: document.getElementById('simulation-score-summary'),
-        eventList: document.getElementById('event-list'),
         certificationStepper: document.getElementById('certification-stepper'),
         auditPanelBody: document.getElementById('audit-panel-body'),
         toast: document.getElementById('toast'),
-        deviceModal: document.getElementById('device-modal'),
-        deviceModalKicker: document.getElementById('device-modal-kicker'),
-        deviceModalTitle: document.getElementById('device-modal-title'),
-        deviceModalClose: document.getElementById('device-modal-close'),
-        deviceModalBody: document.getElementById('device-modal-body'),
-        deviceModalActions: document.getElementById('device-modal-actions'),
+        contextModal: document.getElementById('context-modal'),
+        contextModalKicker: document.getElementById('context-modal-kicker'),
+        contextModalTitle: document.getElementById('context-modal-title'),
+        contextModalClose: document.getElementById('context-modal-close'),
+        contextModalBody: document.getElementById('context-modal-body'),
+        contextModalActions: document.getElementById('context-modal-actions'),
     };
 
     const ctx = els.canvas.getContext('2d');
@@ -264,20 +266,18 @@
         renderOperationsStatus();
         renderMapModeControls();
         drawOffice();
-        renderFindings();
         renderIsmsPanel();
-        renderOperationsPanel();
         renderAuditPanel();
-        renderDeviceModal();
+        renderContextModal();
     }
 
     function renderHud() {
         const game = state.game;
         const categories = game.score.categories;
         els.organizationName.textContent = game.organization.organization_name;
+        els.scoreOffice.textContent = `${officePerformancePercent(game.operations)}%`;
         els.scoreOverall.textContent = `${game.score.overall.percent}%`;
         els.scoreSecurity.textContent = `${categories.security.percent}%`;
-        els.scoreDocumentation.textContent = `${categories.documentation.percent}%`;
         els.scoreResilience.textContent = `${categories.resilience.percent}%`;
         els.scoreAudit.textContent = `${categories.audit.percent}%`;
     }
@@ -321,16 +321,30 @@
     function renderTimeline() {
         const items = timelineItems();
         const activeCount = state.game.timeline.active_count;
-        const openActionCount = state.game.simulation.corrective_actions.filter(isCorrectiveActionOpen).length;
-        els.timelineSummary.textContent = `${activeCount} active events - ${openActionCount} open corrective actions`;
+        const availableCount = state.game.simulation.events.filter((event) => event.status === 'available').length;
+        const resolvedCount = state.game.simulation.events.filter((event) => event.status === 'resolved').length;
+        els.timelineSummary.textContent = `${activeCount} active - ${availableCount} available - ${resolvedCount} resolved`;
 
         els.timelineList.innerHTML = items.map((item) => `
             <article class="timeline-card ${escapeAttr(item.tone)}">
-                <span class="timeline-meta">${escapeHtml(item.meta)}</span>
-                <h3>${escapeHtml(item.title)}</h3>
-                <p>${escapeHtml(item.body)}</p>
+                <button class="timeline-event-open" type="button" data-event-open="${escapeAttr(item.event_key)}" aria-label="Open ${escapeAttr(item.title)} details">
+                    <span class="timeline-meta">${escapeHtml(item.meta)}</span>
+                    <h3>${escapeHtml(item.title)}</h3>
+                    <p>${escapeHtml(item.body)}</p>
+                </button>
+                ${item.event_key ? `
+                    <div class="timeline-menu">
+                        <button class="timeline-menu-toggle" type="button" data-timeline-menu="${escapeAttr(item.event_key)}" aria-haspopup="menu" aria-expanded="${state.activeTimelineMenuKey === item.event_key ? 'true' : 'false'}" aria-label="Actions for ${escapeAttr(item.title)}">⋮</button>
+                        <div class="timeline-menu-popover" role="menu" ${state.activeTimelineMenuKey === item.event_key ? '' : 'hidden'}>
+                            <button type="button" role="menuitem" data-timeline-action="open-event" data-event-key="${escapeAttr(item.event_key)}">Open event</button>
+                            <button type="button" role="menuitem" data-timeline-action="start" data-event-key="${escapeAttr(item.event_key)}" ${item.status === 'available' && !state.busy ? '' : 'disabled'}>Start event</button>
+                            <button type="button" role="menuitem" data-timeline-action="open-asset" data-object-key="${escapeAttr(item.object_key || '')}" ${item.object_key ? '' : 'disabled'}>Open asset</button>
+                        </div>
+                    </div>
+                ` : ''}
             </article>
         `).join('');
+        bindTimelineControls();
     }
 
     function renderTimelineSettings() {
@@ -377,40 +391,28 @@
     }
 
     function timelineItems() {
-        const items = [];
-        const operations = state.game.operations;
-
-        items.push({
-            tone: operations.status,
-            meta: `Office function - ${operationalStatusLabel(operations.status)}`,
-            title: `${operations.clinical_capacity_percent}% clinical capacity`,
-            body: `${operations.patient_delay_minutes} minutes expected patient delay, ${operations.closure_risk_percent}% closure risk.`,
-        });
-
-        for (const event of state.game.timeline.events) {
-            items.push({
+        const items = state.game.simulation.events.map((event) => {
+            const action = actionForEvent(event.event_key);
+            return {
+                event_key: event.event_key,
+                object_key: event.object_key,
+                status: event.status,
                 tone: event.status,
-                meta: `${typeLabel(event.source_type)} - ${event.status}`,
+                meta: `${event.status}${action ? ` - action ${action.status}` : ''}`,
                 title: event.title,
-                body: event.body,
-            });
-        }
-
-        for (const action of state.game.simulation.corrective_actions) {
-            items.push({
-                tone: 'action',
-                meta: `Corrective action - ${action.status}`,
-                title: action.title,
-                body: `${typeLabel(action.source_type)} due in ${action.due_days} days. Verification is ${action.verification_status}.`,
-            });
-        }
+                body: event.status === 'available'
+                    ? event.description
+                    : event.impact_summary || event.lesson_text,
+            };
+        });
 
         if (items.length === 0) {
             items.push({
+                event_key: '',
                 tone: 'empty',
                 meta: 'Timeline',
                 title: 'No events yet',
-                body: 'Simulation events and corrective actions will appear here as the office timeline becomes more active.',
+                body: 'Simulation events will appear here as the office timeline becomes more active.',
             });
         }
 
@@ -512,8 +514,9 @@
                 tone: 'warning',
                 title: 'Resolve active event',
                 body: `${activeEvent.title} is active. Finish evidence and action checks before resolving it.`,
-                action: 'open-operations',
-                buttonText: 'Operations',
+                action: 'open-event',
+                target: activeEvent.event_key,
+                buttonText: 'Event',
                 buttonLabel: 'Open active event',
             });
         } else if (availableEvent) {
@@ -521,8 +524,9 @@
                 tone: 'ready',
                 title: 'Start a timeline event',
                 body: `${availableEvent.title} can turn current gaps into corrective-action practice.`,
-                action: 'open-operations',
-                buttonText: 'Operations',
+                action: 'open-event',
+                target: availableEvent.event_key,
+                buttonText: 'Event',
                 buttonLabel: 'Open simulation events',
             });
         }
@@ -535,9 +539,10 @@
                 body: auditReady
                     ? 'Readiness is high enough to attempt a simulated audit.'
                     : 'Use the office findings, risks, evidence, and corrective actions to improve readiness.',
-                action: auditReady ? 'open-audit' : 'open-operations',
-                buttonText: auditReady ? 'Audit' : 'Operations',
-                buttonLabel: auditReady ? 'Open audit' : 'Open operations',
+                action: auditReady ? 'open-audit' : 'open-event',
+                target: availableEvent ? availableEvent.event_key : '',
+                buttonText: auditReady ? 'Audit' : 'Event',
+                buttonLabel: auditReady ? 'Open audit' : 'Open simulation event',
             });
         }
 
@@ -1263,24 +1268,34 @@
         }
     }
 
-    function renderDeviceModal() {
-        if (!state.deviceModalOpen) {
-            els.deviceModal.hidden = true;
+    function renderContextModal() {
+        if (!state.contextModalOpen) {
+            els.contextModal.hidden = true;
+            return;
+        }
+
+        if (state.contextModalType === 'event') {
+            renderEventModal();
+            return;
+        }
+
+        if (state.contextModalType === 'help') {
+            renderHelpModal();
             return;
         }
 
         const object = selectedObject();
 
         if (!object) {
-            closeDeviceModal();
+            closeContextModal();
             return;
         }
 
-        els.deviceModal.hidden = false;
-        els.deviceModalKicker.textContent = typeLabel(object.object_type);
-        els.deviceModalTitle.textContent = object.display_name;
+        els.contextModal.hidden = false;
+        els.contextModalKicker.textContent = typeLabel(object.object_type);
+        els.contextModalTitle.textContent = object.display_name;
 
-        if (state.deviceModalMode === 'configure') {
+        if (state.contextModalMode === 'configure') {
             renderDeviceConfiguration(object);
         } else {
             renderDeviceProfile(object);
@@ -1295,7 +1310,7 @@
         const activeEvents = state.game.simulation.events.filter((event) => event.object_key === object.object_key && event.status === 'active');
         const enabledControls = object.controls.filter((control) => control.enabled).length;
 
-        els.deviceModalBody.innerHTML = `
+        els.contextModalBody.innerHTML = `
             <div class="asset-header">
                 <div>
                     <p class="asset-type">${escapeHtml(typeLabel(object.object_type))}</p>
@@ -1330,11 +1345,11 @@
             })))}
         `;
 
-        els.deviceModalActions.innerHTML = `
-            <button type="button" data-device-modal-mode="configure">Configure</button>
-            <button class="secondary" type="button" data-device-modal-close>Close</button>
+        els.contextModalActions.innerHTML = `
+            <button type="button" data-context-modal-mode="configure">Configure</button>
+            <button class="secondary" type="button" data-context-modal-close>Close</button>
         `;
-        bindDeviceModalActions();
+        bindContextModalActions();
     }
 
     function renderDeviceConfiguration(object) {
@@ -1351,7 +1366,7 @@
             </label>
         `).join('');
 
-        els.deviceModalBody.innerHTML = `
+        els.contextModalBody.innerHTML = `
             <div class="asset-header">
                 <div>
                     <p class="asset-type">${escapeHtml(typeLabel(object.object_type))}</p>
@@ -1365,18 +1380,192 @@
             <div class="control-list">${controls}</div>
         `;
 
-        els.deviceModalActions.innerHTML = `
-            <button class="secondary" type="button" data-device-modal-mode="profile">Back to profile</button>
-            <button type="button" data-device-modal-close>Done</button>
+        els.contextModalActions.innerHTML = `
+            <button class="secondary" type="button" data-context-modal-mode="profile">Back to profile</button>
+            <button type="button" data-context-modal-close>Done</button>
         `;
 
-        for (const checkbox of els.deviceModalBody.querySelectorAll('[data-control]')) {
+        for (const checkbox of els.contextModalBody.querySelectorAll('[data-control]')) {
             checkbox.addEventListener('change', () => {
                 updateControl(object.object_key, checkbox.dataset.control, checkbox.checked);
             });
         }
 
-        bindDeviceModalActions();
+        bindContextModalActions();
+    }
+
+    function renderEventModal() {
+        const event = eventByKey(state.activeEventKey);
+
+        if (!event) {
+            closeContextModal();
+            return;
+        }
+
+        const linkedAction = actionForEvent(event.event_key);
+        const affectedObject = state.game.map.objects.find((object) => object.object_key === event.object_key);
+        const metrics = event.impact || {};
+
+        els.contextModal.hidden = false;
+        els.contextModalKicker.textContent = 'Timeline event';
+        els.contextModalTitle.textContent = event.title;
+        els.contextModalBody.innerHTML = `
+            <div class="asset-header">
+                <div>
+                    <p class="asset-type">${escapeHtml(event.status)} - ${escapeHtml(event.severity)}</p>
+                    <p class="control-description">${escapeHtml(event.description)}</p>
+                </div>
+                <span class="status-badge ${escapeAttr(statusClass(event.status))}">${escapeHtml(event.status)}</span>
+            </div>
+            <div class="profile-grid">
+                <div class="profile-metric"><span>Affected asset</span><strong>${escapeHtml(affectedObject ? affectedObject.display_name : shortObjectName(event.object_key))}</strong></div>
+                <div class="profile-metric"><span>Data loss</span><strong>${Number(metrics.data_availability_loss || 0)}%</strong></div>
+                <div class="profile-metric"><span>Delay</span><strong>${Number(metrics.patient_delay_minutes || 0)}m</strong></div>
+            </div>
+            <section>
+                <h3>Operational context</h3>
+                <p class="control-description">${escapeHtml(event.operational_context || event.impact_summary || event.lesson_text)}</p>
+            </section>
+            <section>
+                <h3>What happens</h3>
+                <p class="control-description">${escapeHtml(event.status === 'available' ? event.trigger_text : event.lesson_text)}</p>
+                ${event.impact_summary ? `<p class="artifact-meta">${escapeHtml(event.impact_summary)}</p>` : ''}
+            </section>
+            ${linkedSection('Required controls', (event.required_controls || []).map((key) => ({
+                title: controlLabel(key),
+                meta: controlImplemented(key) ? 'Implemented' : 'Missing or incomplete',
+            })))}
+            ${linkedSection('Required evidence', (event.required_evidence || []).map((key) => {
+                const evidence = state.game.isms.evidence.find((item) => item.evidence_key === key);
+                return {
+                    title: evidence ? evidence.title : key,
+                    meta: evidence ? `${evidence.status} - ${evidence.owner}` : 'Not in evidence checklist',
+                };
+            }))}
+            ${linkedAction ? linkedSection('Linked corrective action', [{
+                title: linkedAction.title,
+                meta: `${linkedAction.status} - ${linkedAction.verification_status}`,
+            }]) : ''}
+        `;
+
+        const actionButton = linkedAction
+            ? `<button type="button" data-event-action="open-action" data-event-key="${escapeAttr(event.event_key)}">Open action</button>`
+            : '';
+        const eventButton = event.status === 'available'
+            ? `<button type="button" data-event-action="start" data-event-key="${escapeAttr(event.event_key)}" ${state.busy ? 'disabled' : ''}>Start event</button>`
+            : event.status === 'active'
+                ? `<button type="button" data-event-action="resolve" data-event-key="${escapeAttr(event.event_key)}" ${state.busy ? 'disabled' : ''}>Resolve</button>`
+                : '';
+
+        els.contextModalActions.innerHTML = `
+            ${eventButton}
+            ${actionButton}
+            ${affectedObject ? `<button class="secondary" type="button" data-open-asset="${escapeAttr(affectedObject.object_key)}">Open asset</button>` : ''}
+            <button class="secondary" type="button" data-context-modal-close>Close</button>
+        `;
+        bindContextModalActions();
+    }
+
+    function renderHelpModal() {
+        const tabs = [
+            ['game', 'Game'],
+            ['layers', 'Layers'],
+            ['example', 'Example'],
+            ['components', 'Components'],
+        ];
+        const activeTab = tabs.some(([key]) => key === state.activeHelpTab) ? state.activeHelpTab : 'game';
+        state.activeHelpTab = activeTab;
+
+        els.contextModal.hidden = false;
+        els.contextModalKicker.textContent = 'Help';
+        els.contextModalTitle.textContent = 'Game Guide';
+        els.contextModalBody.innerHTML = `
+            <div class="help-tabs" role="tablist" aria-label="Help topics">
+                ${tabs.map(([key, label]) => `
+                    <button type="button" role="tab" data-help-tab="${escapeAttr(key)}" aria-selected="${activeTab === key ? 'true' : 'false'}" class="${activeTab === key ? 'active' : ''}">${escapeHtml(label)}</button>
+                `).join('')}
+            </div>
+            <div class="help-content">
+                ${helpContent(activeTab)}
+            </div>
+        `;
+        els.contextModalActions.innerHTML = '<button type="button" data-context-modal-close>Close</button>';
+        bindContextModalActions();
+    }
+
+    function helpContent(tab) {
+        if (tab === 'layers') {
+            return `
+                <section class="help-section">
+                    <h3>The six layers</h3>
+                    <ol class="help-list">
+                        <li><strong>Office Operations:</strong> The success layer. Clinical capacity, EHR availability, data availability, delay, exposure, and closure risk show whether the practice can work.</li>
+                        <li><strong>Device configuration:</strong> The hands-on layer. Click devices on the floor plan and enable controls only when they are actually implemented.</li>
+                        <li><strong>Event and threat layer:</strong> The pressure layer. Timeline events stress weak controls and show what breaks when resilience is missing.</li>
+                        <li><strong>ISMS officer layer:</strong> The management-system layer. Inventory, risks, evidence, and actions make resilience visible, owned, and auditable.</li>
+                        <li><strong>Audit and feedback layer:</strong> The diagnostic layer. The audit samples controls, evidence, risks, actions, and event history to show what to improve next.</li>
+                        <li><strong>Learning layer:</strong> The reason layer. The game teaches ISO 27001 thinking through operational consequences, not through memorizing clauses.</li>
+                    </ol>
+                </section>
+            `;
+        }
+
+        if (tab === 'example') {
+            return `
+                <section class="help-section">
+                    <h3>End-to-end example</h3>
+                    <ol class="help-list">
+                        <li>You start in the Office view and notice Office Performance is below the ideal target or that readiness is weak.</li>
+                        <li>You click the Cloud EHR or Backup NAS on the floor plan and inspect the device profile. Missing controls and linked findings explain the technical gap.</li>
+                        <li>You configure the relevant controls, such as MFA, backup schedule, restore testing, or least privilege, when the setup would really support them.</li>
+                        <li>You open ISMS and verify inventory ownership, treat related risks, and prepare evidence such as backup restore records or access review notes.</li>
+                        <li>A Timeline event, for example ransomware or suspicious cloud-account activity, becomes active. The Office Operations panel shows whether capacity, data, delay, or closure risk changed.</li>
+                        <li>You open the event, review required controls and evidence, then use the linked corrective action in ISMS Actions to record and verify the response.</li>
+                        <li>After the corrective action is verified as effective, you resolve the event and confirm Office Performance recovers.</li>
+                        <li>You run an Audit. The report samples what happened, points out remaining gaps, and gives the next improvement targets.</li>
+                    </ol>
+                </section>
+            `;
+        }
+
+        if (tab === 'components') {
+            return `
+                <section class="help-section">
+                    <h3>Components</h3>
+                    <div class="help-grid">
+                        <article><h4>Top KPIs</h4><p>Office is the main performance target. Readiness, Security, Resilience, and Audit are supporting diagnostics that explain why performance may be fragile.</p></article>
+                        <article><h4>Office Operations</h4><p>Shows the current operational state: clinical capacity, EHR availability, data availability, patient delay, exposure, and closure risk.</p></article>
+                        <article><h4>Floor Plan</h4><p>The primary work surface. Click visible office devices to inspect findings, risks, evidence, controls, actions, and active event context.</p></article>
+                        <article><h4>View Modes</h4><p>Overview shows the office layout. Readiness, Evidence, Risk, and Audit overlays show different concerns directly on the map.</p></article>
+                        <article><h4>Timeline</h4><p>Shows simulation events. Open an event for details, or use the three-dot menu to start an event or jump to the affected asset.</p></article>
+                        <article><h4>ISMS Workbench</h4><p>The information-security officer surface. It organizes Inventory, Risks, Evidence, and Actions as the management-system support for resilience.</p></article>
+                        <article><h4>Inventory</h4><p>Records assets, owners, classification, criticality, and verification status. Verified inventory improves documentation and audit readiness.</p></article>
+                        <article><h4>Risks</h4><p>Tracks likelihood, impact, owners, and treatment decisions. Treat or accept risks to reduce resilience and audit gaps.</p></article>
+                        <article><h4>Evidence</h4><p>Shows what proof should exist for controls and processes. Ready or reviewed evidence helps audits and event response.</p></article>
+                        <article><h4>Actions</h4><p>Tracks corrective actions created by events or findings. Actions must be completed and verified as effective before related events can be resolved.</p></article>
+                        <article><h4>Audit</h4><p>Runs a simulated audit report. Use it as feedback, not as the only goal: audit findings tell you how to improve office resilience.</p></article>
+                    </div>
+                </section>
+            `;
+        }
+
+        return `
+            <section class="help-section">
+                <h3>Purpose and core idea</h3>
+                <p>ISMS Office is a small office IT-resilience simulation. You act as the system administrator responsible for keeping a physician practice functioning while security and operational events threaten the setup.</p>
+                <p>The goal is not only to pass an audit. The goal is to maintain full Office Performance. ISO 27001-style controls, risks, evidence, corrective actions, and audits are the professional tools you use to keep the office working.</p>
+                <h3>What you are expected to do</h3>
+                <ul class="help-list">
+                    <li>Use the floor plan to inspect devices and configure appropriate controls.</li>
+                    <li>Watch Office Performance and Office Operations to see whether the practice can still operate.</li>
+                    <li>Use Timeline events to test the setup against realistic threats.</li>
+                    <li>Use ISMS Inventory, Risks, Evidence, and Actions to make the setup auditable and resilient.</li>
+                    <li>Run audits to get structured feedback and find the next weakest point.</li>
+                </ul>
+                <h3>First five minutes</h3>
+                <p>Start with a critical device, enable real controls, prepare matching evidence, then trigger or inspect a Timeline event to see how the office reacts. Keep improving until Office Performance stays at 100% even when events occur.</p>
+            </section>
+        `;
     }
 
     function linkedSection(title, items) {
@@ -1404,29 +1593,82 @@
         `;
     }
 
-    function bindDeviceModalActions() {
-        for (const button of els.deviceModalActions.querySelectorAll('[data-device-modal-mode]')) {
+    function bindContextModalActions() {
+        for (const button of els.contextModalBody.querySelectorAll('[data-help-tab]')) {
             button.addEventListener('click', () => {
-                state.deviceModalMode = button.dataset.deviceModalMode;
-                renderDeviceModal();
+                state.activeHelpTab = button.dataset.helpTab;
+                renderHelpModal();
             });
         }
 
-        for (const button of els.deviceModalActions.querySelectorAll('[data-device-modal-close]')) {
-            button.addEventListener('click', closeDeviceModal);
+        for (const button of els.contextModalActions.querySelectorAll('[data-context-modal-mode]')) {
+            button.addEventListener('click', () => {
+                state.contextModalMode = button.dataset.contextModalMode;
+                renderContextModal();
+            });
+        }
+
+        for (const button of els.contextModalActions.querySelectorAll('[data-event-action]')) {
+            button.addEventListener('click', () => {
+                updateEvent(button.dataset.eventAction, button.dataset.eventKey);
+            });
+        }
+
+        for (const button of els.contextModalActions.querySelectorAll('[data-open-asset]')) {
+            button.addEventListener('click', () => {
+                openTimelineAsset(button.dataset.openAsset);
+            });
+        }
+
+        for (const button of els.contextModalActions.querySelectorAll('[data-context-modal-close]')) {
+            button.addEventListener('click', closeContextModal);
         }
     }
 
     function openDeviceModal(objectKey, mode = 'profile') {
         state.selectedKey = objectKey;
-        state.deviceModalMode = mode;
-        state.deviceModalOpen = true;
+        state.contextModalType = 'device';
+        state.contextModalMode = mode;
+        state.contextModalOpen = true;
+        state.activeEventKey = null;
         render();
     }
 
-    function closeDeviceModal() {
-        state.deviceModalOpen = false;
-        els.deviceModal.hidden = true;
+    function openEventModal(eventKey) {
+        if (!eventKey) {
+            openDrawer('timeline');
+            return;
+        }
+
+        state.activeEventKey = eventKey;
+        state.contextModalType = 'event';
+        state.contextModalMode = 'profile';
+        state.contextModalOpen = true;
+        render();
+    }
+
+    function openHelpModal() {
+        state.contextModalType = 'help';
+        state.contextModalMode = 'profile';
+        state.contextModalOpen = true;
+        state.activeEventKey = null;
+        render();
+    }
+
+    function openTimelineAsset(objectKey) {
+        if (!objectKey) {
+            return;
+        }
+
+        closeDrawer();
+        setPrimaryTab('office');
+        openDeviceModal(objectKey, 'profile');
+    }
+
+    function closeContextModal() {
+        state.contextModalOpen = false;
+        state.activeEventKey = null;
+        els.contextModal.hidden = true;
     }
 
     function findingsForObject(objectKey) {
@@ -1435,22 +1677,6 @@
 
     function linkedItems(items, objectKey) {
         return items.filter((item) => item.object_key === objectKey);
-    }
-
-    function renderFindings() {
-        const findings = state.game.findings.slice(0, 7);
-
-        if (findings.length === 0) {
-            els.findingsList.innerHTML = '<p class="empty-state">No open findings in the current simulation state.</p>';
-            return;
-        }
-
-        els.findingsList.innerHTML = findings.map((finding) => `
-            <article class="finding-item">
-                <div class="finding-title">${escapeHtml(finding.title)}</div>
-                <div class="finding-meta">${escapeHtml(finding.object_name)} - ${escapeHtml(finding.severity)}</div>
-            </article>
-        `).join('');
     }
 
     function renderIsmsPanel() {
@@ -1643,19 +1869,6 @@
         }
     }
 
-    function renderOperationsPanel() {
-        const simulation = state.game.simulation;
-        const scores = state.game.score.simulation;
-        const openActions = simulation.corrective_actions.filter(isCorrectiveActionOpen).length;
-        els.simulationScoreSummary.textContent = `Events ${scores.events.percent}% - ${openActions} linked actions in ISMS`;
-
-        els.eventList.innerHTML = simulation.events.length
-            ? simulation.events.map(renderEventCard).join('')
-            : '<p class="empty-state">No simulation events are available.</p>';
-
-        bindOperationsControls();
-    }
-
     async function updateTimelineSettings() {
         if (state.busy || !state.game.settings || !state.game.settings.timeline) {
             return;
@@ -1711,8 +1924,20 @@
 
     function setDrawerTab(tabKey) {
         const advisorAllowed = guidanceMode() !== 'challenge';
-        state.activeDrawerTab = tabKey === 'advisor' && advisorAllowed ? 'advisor' : 'timeline';
-        els.drawerTitle.textContent = state.activeDrawerTab === 'advisor' ? 'Advisor' : 'Timeline';
+        if (tabKey === 'advisor' && !advisorAllowed) {
+            state.activeDrawerTab = 'timeline';
+        } else if (['timeline', 'advisor', 'settings'].includes(tabKey)) {
+            state.activeDrawerTab = tabKey;
+        } else {
+            state.activeDrawerTab = 'timeline';
+        }
+
+        const titles = {
+            timeline: 'Timeline',
+            advisor: 'Advisor',
+            settings: 'Settings',
+        };
+        els.drawerTitle.textContent = titles[state.activeDrawerTab] || 'Timeline';
 
         for (const button of els.drawerTabs.querySelectorAll('[data-drawer-tab]')) {
             const active = button.dataset.drawerTab === state.activeDrawerTab;
@@ -1850,32 +2075,6 @@
         }));
     }
 
-    function renderEventCard(event) {
-        const linkedAction = actionForEvent(event.event_key);
-        const actionButton = linkedAction
-            ? `<button type="button" data-event-action="open-action" data-event-key="${escapeAttr(event.event_key)}">Open action</button>`
-            : '';
-        const buttonHtml = event.status === 'available'
-            ? `<button type="button" data-event-action="start" data-event-key="${escapeAttr(event.event_key)}" ${state.busy ? 'disabled' : ''}>Start event</button>`
-            : event.status === 'active'
-                ? `<button type="button" data-event-action="resolve" data-event-key="${escapeAttr(event.event_key)}" ${state.busy ? 'disabled' : ''}>Resolve</button>${actionButton}`
-                : actionButton;
-
-        return `
-            <article class="event-card">
-                <header>
-                    <h4>${escapeHtml(event.title)}</h4>
-                    <span class="status-badge ${escapeAttr(statusClass(event.status))}">${escapeHtml(event.status)}</span>
-                </header>
-                <p class="control-description">${escapeHtml(event.description)}</p>
-                <p class="control-description">${escapeHtml(event.status === 'available' ? event.trigger_text : event.lesson_text)}</p>
-                ${event.impact_summary ? `<p class="artifact-meta">${escapeHtml(event.impact_summary)}</p>` : ''}
-                ${linkedAction ? `<p class="artifact-meta">Linked action: ${escapeHtml(linkedAction.title)}</p>` : ''}
-                <div class="event-actions">${buttonHtml}</div>
-            </article>
-        `;
-    }
-
     function actionForEvent(eventKey) {
         return state.game.simulation.corrective_actions.find((action) => action.source_type === 'event' && action.source_key === eventKey) || null;
     }
@@ -1940,10 +2139,38 @@
         `;
     }
 
-    function bindOperationsControls() {
-        for (const button of els.eventList.querySelectorAll('[data-event-action]')) {
+    function bindTimelineControls() {
+        for (const button of els.timelineList.querySelectorAll('[data-event-open]')) {
             button.addEventListener('click', () => {
-                updateEvent(button.dataset.eventAction, button.dataset.eventKey);
+                state.activeTimelineMenuKey = null;
+                openEventModal(button.dataset.eventOpen);
+            });
+        }
+
+        for (const button of els.timelineList.querySelectorAll('[data-timeline-menu]')) {
+            button.addEventListener('click', () => {
+                state.activeTimelineMenuKey = state.activeTimelineMenuKey === button.dataset.timelineMenu
+                    ? null
+                    : button.dataset.timelineMenu;
+                renderTimeline();
+            });
+        }
+
+        for (const button of els.timelineList.querySelectorAll('[data-timeline-action]')) {
+            button.addEventListener('click', () => {
+                state.activeTimelineMenuKey = null;
+
+                if (button.dataset.timelineAction === 'open-event') {
+                    openEventModal(button.dataset.eventKey);
+                    return;
+                }
+
+                if (button.dataset.timelineAction === 'open-asset') {
+                    openTimelineAsset(button.dataset.objectKey);
+                    return;
+                }
+
+                updateEvent('start', button.dataset.eventKey);
             });
         }
     }
@@ -1972,6 +2199,7 @@
 
     async function updateEvent(action, eventKey) {
         if (action === 'open-action') {
+            closeContextModal();
             openCorrectiveActions(eventKey);
             return;
         }
@@ -2085,6 +2313,7 @@
 
     function openCorrectiveActions(eventKey = '') {
         closeDrawer();
+        closeContextModal();
         state.activeIsmsTab = 'actions';
         setPrimaryTab('isms');
         renderIsmsPanel();
@@ -2203,9 +2432,10 @@
             return;
         }
 
-        if (action === 'open-operations') {
+        if (action === 'open-event') {
             closeDrawer();
             setPrimaryTab('office');
+            openEventModal(target || (state.game.simulation.events[0] && state.game.simulation.events[0].event_key) || '');
             return;
         }
 
@@ -2221,6 +2451,39 @@
         }
 
         return state.game.map.objects.find((object) => object.object_key === state.selectedKey) || null;
+    }
+
+    function eventByKey(eventKey) {
+        if (!state.game || !eventKey) {
+            return null;
+        }
+
+        return state.game.simulation.events.find((event) => event.event_key === eventKey) || null;
+    }
+
+    function officePerformancePercent(operations) {
+        return Math.max(0, Math.min(100, Math.min(
+            Number(operations.clinical_capacity_percent ?? 100),
+            Number(operations.ehr_availability_percent ?? 100),
+            Number(operations.data_availability_percent ?? 100),
+            100 - Number(operations.closure_risk_percent ?? 0),
+        )));
+    }
+
+    function controlLabel(controlKey) {
+        for (const object of state.game.map.objects) {
+            const control = object.controls.find((item) => item.key === controlKey);
+
+            if (control) {
+                return control.label;
+            }
+        }
+
+        return controlKey;
+    }
+
+    function controlImplemented(controlKey) {
+        return state.game.map.objects.some((object) => object.controls.some((control) => control.key === controlKey && control.enabled));
     }
 
     function typeLabel(type) {
@@ -2376,6 +2639,8 @@
 
     els.runAudit.addEventListener('click', runAudit);
 
+    els.helpToggle.addEventListener('click', openHelpModal);
+
     els.drawerToggle.addEventListener('click', () => {
         openDrawer('timeline', els.drawerToggle);
     });
@@ -2456,17 +2721,17 @@
         }
     });
 
-    els.deviceModalClose.addEventListener('click', closeDeviceModal);
+    els.contextModalClose.addEventListener('click', closeContextModal);
 
-    els.deviceModal.addEventListener('click', (event) => {
-        if (event.target === els.deviceModal) {
-            closeDeviceModal();
+    els.contextModal.addEventListener('click', (event) => {
+        if (event.target === els.contextModal) {
+            closeContextModal();
         }
     });
 
     window.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && state.deviceModalOpen) {
-            closeDeviceModal();
+        if (event.key === 'Escape' && state.contextModalOpen) {
+            closeContextModal();
             return;
         }
 

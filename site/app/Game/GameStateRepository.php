@@ -409,8 +409,16 @@ final class GameStateRepository
 
     public function updateTimelineSettings(int $offlineEventMinutes, int $maxEventsPerAdvance): void
     {
-        $this->upsertSetting('game.timeline.offline_event_minutes', (string) $offlineEventMinutes, 'integer');
-        $this->upsertSetting('game.timeline.max_events_per_advance', (string) $maxEventsPerAdvance, 'integer');
+        $this->pdo->beginTransaction();
+
+        try {
+            $this->upsertSetting('game.timeline.offline_event_minutes', (string) $offlineEventMinutes, 'integer');
+            $this->upsertSetting('game.timeline.max_events_per_advance', (string) $maxEventsPerAdvance, 'integer');
+            $this->pdo->commit();
+        } catch (\Throwable $exception) {
+            $this->pdo->rollBack();
+            throw $exception;
+        }
     }
 
     public function guidanceMode(int $userId): string
@@ -608,36 +616,44 @@ final class GameStateRepository
             $severity = 'minor';
         }
 
-        $this->upsertTimelineEvent($userId, [
-            'event_key' => 'event:' . $eventKey,
-            'source_type' => 'event',
-            'source_key' => $eventKey,
-            'object_key' => $event['object_key'],
-            'title' => $event['title'],
-            'body' => $event['lesson_text'],
-            'severity' => $severity,
-            'status' => 'active',
-            'impact' => [
-                'operational_context' => $definition['operational_context'] ?? '',
-                'impact_summary' => $definition['impact_summary'] ?? '',
-                'metrics' => $definition['impact'] ?? [],
-                'required_controls' => $definition['required_controls'] ?? [],
-                'required_evidence' => $definition['required_evidence'] ?? [],
-                'generation' => $generationContext,
-            ],
-        ]);
-        $this->createCorrectiveAction($userId, [
-            'action_key' => 'event_' . $eventKey,
-            'source_type' => 'event',
-            'source_key' => $eventKey,
-            'object_key' => $event['object_key'],
-            'title' => $definition['corrective_action_title'] ?? ('Resolve timeline event: ' . $event['title']),
-            'owner' => $definition['owner'] ?? 'Practice Manager',
-            'due_days' => 7,
-            'status' => 'open',
-            'verification_status' => 'not_checked',
-            'notes' => $event['lesson_text'],
-        ]);
+        $this->pdo->beginTransaction();
+
+        try {
+            $this->upsertTimelineEvent($userId, [
+                'event_key' => 'event:' . $eventKey,
+                'source_type' => 'event',
+                'source_key' => $eventKey,
+                'object_key' => $event['object_key'],
+                'title' => $event['title'],
+                'body' => $event['lesson_text'],
+                'severity' => $severity,
+                'status' => 'active',
+                'impact' => [
+                    'operational_context' => $definition['operational_context'] ?? '',
+                    'impact_summary' => $definition['impact_summary'] ?? '',
+                    'metrics' => $definition['impact'] ?? [],
+                    'required_controls' => $definition['required_controls'] ?? [],
+                    'required_evidence' => $definition['required_evidence'] ?? [],
+                    'generation' => $generationContext,
+                ],
+            ]);
+            $this->createCorrectiveAction($userId, [
+                'action_key' => 'event_' . $eventKey,
+                'source_type' => 'event',
+                'source_key' => $eventKey,
+                'object_key' => $event['object_key'],
+                'title' => $definition['corrective_action_title'] ?? ('Resolve timeline event: ' . $event['title']),
+                'owner' => $definition['owner'] ?? 'Practice Manager',
+                'due_days' => 7,
+                'status' => 'open',
+                'verification_status' => 'not_checked',
+                'notes' => $event['lesson_text'],
+            ]);
+            $this->pdo->commit();
+        } catch (\Throwable $exception) {
+            $this->pdo->rollBack();
+            throw $exception;
+        }
     }
 
     public function resolveEvent(int $userId, string $eventKey): void
@@ -914,7 +930,11 @@ final class GameStateRepository
             $actionKey,
             $userId,
             $fields,
-            ['status', 'verification_status', 'owner', 'notes']
+            ['status', 'verification_status', 'owner', 'notes'],
+            'INVALID_CORRECTIVE_ACTION_FIELD',
+            'That field cannot be updated for this corrective action.',
+            'CORRECTIVE_ACTION_NOT_FOUND',
+            'The selected corrective action does not exist.'
         );
 
         if (($fields['status'] ?? null) === 'verified') {
@@ -1033,7 +1053,18 @@ final class GameStateRepository
      * @param array<string,mixed> $fields
      * @param list<string> $allowedFields
      */
-    private function updateKnownFields(string $table, string $keyColumn, string $itemKey, int $userId, array $fields, array $allowedFields): void
+    private function updateKnownFields(
+        string $table,
+        string $keyColumn,
+        string $itemKey,
+        int $userId,
+        array $fields,
+        array $allowedFields,
+        string $invalidFieldCode = 'INVALID_ISMS_FIELD',
+        string $invalidFieldMessage = 'That field cannot be updated for this ISMS item.',
+        string $notFoundCode = 'ISMS_ITEM_NOT_FOUND',
+        string $notFoundMessage = 'The selected ISMS item does not exist.'
+    ): void
     {
         $allowed = array_fill_keys($allowedFields, true);
         $updates = [];
@@ -1044,7 +1075,7 @@ final class GameStateRepository
 
         foreach ($fields as $field => $value) {
             if (!isset($allowed[$field])) {
-                throw new ApiException('INVALID_ISMS_FIELD', 400, 'That field cannot be updated for this ISMS item.', [
+                throw new ApiException($invalidFieldCode, 400, $invalidFieldMessage, [
                     'field' => $field,
                 ]);
             }
@@ -1071,7 +1102,7 @@ final class GameStateRepository
             $exists->execute(['user_id' => $userId, 'item_key' => $itemKey]);
 
             if (!$exists->fetch()) {
-                throw new ApiException('ISMS_ITEM_NOT_FOUND', 404, 'The selected ISMS item does not exist.');
+                throw new ApiException($notFoundCode, 404, $notFoundMessage);
             }
         }
     }
@@ -1152,6 +1183,10 @@ final class GameStateRepository
 
         $decoded = json_decode($value, true);
 
-        return is_array($decoded) ? $decoded : [];
+        if (!is_array($decoded)) {
+            throw new ApiException('GAME_STATE_JSON_INVALID', 500, 'Stored game state JSON is invalid.');
+        }
+
+        return $decoded;
     }
 }

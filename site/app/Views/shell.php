@@ -61,18 +61,18 @@
                 <p class="eyebrow">ISMS Office</p>
                 <h1 id="organization-name">Physician Practice</h1>
             </div>
-            <div class="score-strip" aria-label="Readiness scores">
+            <div class="score-strip" aria-label="Office performance and readiness scores">
                 <div class="score-pill">
-                    <span>Overall</span>
+                    <span>Office</span>
+                    <strong id="score-office">100%</strong>
+                </div>
+                <div class="score-pill">
+                    <span>Readiness</span>
                     <strong id="score-overall">0%</strong>
                 </div>
                 <div class="score-pill">
                     <span>Security</span>
                     <strong id="score-security">0%</strong>
-                </div>
-                <div class="score-pill">
-                    <span>Evidence</span>
-                    <strong id="score-documentation">0%</strong>
                 </div>
                 <div class="score-pill">
                     <span>Resilience</span>
@@ -84,6 +84,7 @@
                 </div>
             </div>
             <div class="topbar-actions">
+                <button id="help-toggle" class="icon-button" type="button" aria-label="Help and game guide">?</button>
                 <button id="drawer-toggle" type="button" aria-haspopup="dialog" aria-controls="info-drawer" aria-expanded="false">
                     <span>Timeline</span>
                     <span id="drawer-badge" class="drawer-badge" hidden>0</span>
@@ -99,10 +100,10 @@
         </nav>
 
         <section id="panel-office" class="tab-panel active" role="tabpanel" aria-labelledby="tab-office" data-tab-panel="office">
-            <section class="operations-status-panel" aria-label="Office function status">
+            <section class="operations-status-panel" aria-label="Office operations status">
                 <header>
                     <div>
-                        <p class="eyebrow">Office Function</p>
+                        <p class="eyebrow">Office Operations</p>
                         <h2 id="operations-status-title">Operational Status</h2>
                     </div>
                     <span id="operations-status-badge" class="status-badge ready">Nominal</span>
@@ -129,25 +130,6 @@
                     <canvas id="office-canvas" width="1120" height="720"></canvas>
                 </section>
 
-                <section class="findings-panel office-findings">
-                    <h2>Open Findings</h2>
-                    <div id="findings-list"></div>
-                </section>
-            </section>
-
-            <section class="operations-panel office-operations" aria-label="Office operations">
-                <header class="panel-heading">
-                    <div>
-                        <h2>Operations</h2>
-                        <p id="simulation-score-summary" class="asset-type"></p>
-                    </div>
-                </header>
-                <div class="event-grid operations-grid">
-                    <section>
-                        <h3>Simulation Events</h3>
-                        <div id="event-list" class="event-list"></div>
-                    </section>
-                </div>
             </section>
         </section>
 
@@ -199,10 +181,25 @@
             <div id="drawer-tabs" class="drawer-tabs" role="tablist" aria-label="Drawer views">
                 <button id="drawer-tab-timeline" class="active" type="button" role="tab" aria-selected="true" aria-controls="drawer-panel-timeline" data-drawer-tab="timeline">Timeline</button>
                 <button id="drawer-tab-advisor" type="button" role="tab" aria-selected="false" aria-controls="drawer-panel-advisor" data-drawer-tab="advisor">Advisor</button>
+                <button id="drawer-tab-settings" type="button" role="tab" aria-selected="false" aria-controls="drawer-panel-settings" data-drawer-tab="settings">Settings</button>
             </div>
-            <section id="drawer-panel-timeline" class="drawer-panel active" role="tabpanel" aria-labelledby="drawer-tab-timeline" data-drawer-panel="timeline">
+            <section id="drawer-panel-timeline" class="drawer-panel timeline-panel active" role="tabpanel" aria-labelledby="drawer-tab-timeline" data-drawer-panel="timeline">
                 <p id="timeline-summary" class="asset-type"></p>
                 <div id="timeline-list" class="timeline-list"></div>
+            </section>
+            <section id="drawer-panel-advisor" class="drawer-panel" role="tabpanel" aria-labelledby="drawer-tab-advisor" data-drawer-panel="advisor" hidden>
+                <section id="guidance-panel" class="guidance-panel" aria-label="Guidance hints">
+                    <header>
+                        <div>
+                            <p class="eyebrow">Advisor</p>
+                            <h2>Guidance</h2>
+                        </div>
+                        <p id="guidance-summary" class="asset-type"></p>
+                    </header>
+                    <div id="guidance-list" class="guidance-list"></div>
+                </section>
+            </section>
+            <section id="drawer-panel-settings" class="drawer-panel settings-panel" role="tabpanel" aria-labelledby="drawer-tab-settings" data-drawer-panel="settings" hidden>
                 <form id="guidance-mode-form" class="drawer-settings">
                     <header>
                         <div>
@@ -237,31 +234,19 @@
                     <button type="submit">Update timeline</button>
                 </form>
             </section>
-            <section id="drawer-panel-advisor" class="drawer-panel" role="tabpanel" aria-labelledby="drawer-tab-advisor" data-drawer-panel="advisor" hidden>
-                <section id="guidance-panel" class="guidance-panel" aria-label="Guidance hints">
-                    <header>
-                        <div>
-                            <p class="eyebrow">Advisor</p>
-                            <h2>Guidance</h2>
-                        </div>
-                        <p id="guidance-summary" class="asset-type"></p>
-                    </header>
-                    <div id="guidance-list" class="guidance-list"></div>
-                </section>
-            </section>
         </aside>
 
-        <div id="device-modal" class="modal-backdrop" hidden>
-            <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="device-modal-title">
+        <div id="context-modal" class="modal-backdrop" hidden>
+            <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="context-modal-title">
                 <header class="modal-header">
                     <div>
-                        <p id="device-modal-kicker" class="eyebrow">Office asset</p>
-                        <h2 id="device-modal-title">Device</h2>
+                        <p id="context-modal-kicker" class="eyebrow">Office asset</p>
+                        <h2 id="context-modal-title">Device</h2>
                     </div>
-                    <button id="device-modal-close" class="icon-button" type="button" aria-label="Close device dialog">x</button>
+                    <button id="context-modal-close" class="icon-button" type="button" aria-label="Close detail dialog">x</button>
                 </header>
-                <div id="device-modal-body" class="modal-body"></div>
-                <footer id="device-modal-actions" class="modal-actions"></footer>
+                <div id="context-modal-body" class="modal-body"></div>
+                <footer id="context-modal-actions" class="modal-actions"></footer>
             </section>
         </div>
     </main>

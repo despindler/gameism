@@ -17,6 +17,7 @@ use Gameism\Http\Request;
 use Gameism\Http\ApiException;
 use Gameism\Http\JsonResponse;
 use Gameism\Http\Router;
+use Gameism\Http\SecurityHeaders;
 
 final class Application
 {
@@ -87,6 +88,7 @@ final class Application
 
     private function renderAppShell(): void
     {
+        SecurityHeaders::send();
         $version = htmlspecialchars($this->config->version(), ENT_QUOTES, 'UTF-8');
         require __DIR__ . '/Views/shell.php';
     }

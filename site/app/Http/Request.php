@@ -81,9 +81,18 @@ final class Request
      */
     public function object(string $key): array
     {
-        $value = $this->body[$key] ?? [];
+        if (!array_key_exists($key, $this->body)) {
+            return [];
+        }
 
-        return is_array($value) ? $value : [];
+        $value = $this->body[$key];
+
+        if (!is_array($value) || ($value !== [] && array_is_list($value))) {
+            throw new ApiException('INVALID_REQUEST_FIELD', 400, 'The request field must be a JSON object.', [
+                'field' => $key,
+            ]);
+        }
+
+        return $value;
     }
 }
-
