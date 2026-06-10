@@ -26,6 +26,7 @@ $pdo = $factory->pdo();
 
 resetDatabase($pdo, $root);
 assertTrue($pdo->query("SHOW TABLES LIKE 'incident_events'")->fetchColumn() === false, 'incident_events table is not part of the current schema');
+assertTrue($pdo->query("SHOW TABLES LIKE 'internal_audit_reports'")->fetchColumn() === false, 'internal_audit_reports table is not part of the current schema');
 
 $auth = new AuthService($factory, new SessionManager($config), $config);
 $game = new GameStateService($factory, new AuditScoringService());
@@ -40,6 +41,7 @@ assertTrue(count($initial['isms']['risks']) === 6, 'initial risk register has si
 assertTrue(count($initial['isms']['evidence']) === 8, 'initial evidence checklist has eight items');
 assertTrue(count($initial['teaching']['incidents']) === 3, 'initial scenario has three simulation events');
 assertTrue(count($initial['teaching']['corrective_actions']) === 0, 'initial scenario has no corrective actions');
+assertTrue(!array_key_exists('latest_internal_audit', $initial['teaching']), 'game state no longer exposes latest internal audit');
 assertTrue(count($initial['timeline']['events']) === 0, 'initial timeline has no generated event instances');
 assertTrue($initial['score']['overall']['percent'] < 60, 'initial scenario starts with visible gaps');
 assertTrue($initial['operations']['clinical_capacity_percent'] === 100, 'initial office has full clinical capacity before incidents');
@@ -138,11 +140,6 @@ try {
     $invalidActionStatusRejected = $exception->apiCode() === 'INVALID_CORRECTIVE_ACTION_STATUS';
 }
 assertTrue($invalidActionStatusRejected, 'invalid corrective action status is rejected with a stable error code');
-
-$internalAudit = $game->runInternalAudit($user);
-assertTrue(isset($internalAudit['report']['status']), 'internal audit report includes a status');
-assertTrue(isset($internalAudit['game_state']['teaching']['latest_internal_audit']), 'latest internal audit is persisted');
-assertTrue(count($internalAudit['game_state']['teaching']['corrective_actions']) >= 1, 'internal audit keeps or creates corrective actions');
 
 $invalidControlRejected = false;
 try {

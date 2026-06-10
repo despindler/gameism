@@ -377,7 +377,6 @@ final class GameStateRepository
         return [
             'incidents' => $this->incidentEvents($userId),
             'corrective_actions' => $this->correctiveActions($userId),
-            'latest_internal_audit' => $this->latestInternalAuditReport($userId),
         ];
     }
 
@@ -775,57 +774,6 @@ final class GameStateRepository
             'verification_status' => $action['verification_status'] ?? 'not_checked',
             'notes' => $action['notes'] ?? '',
         ]);
-    }
-
-    /**
-     * @param array<string,mixed> $report
-     */
-    public function saveInternalAuditReport(int $userId, array $report): int
-    {
-        $statement = $this->pdo->prepare(
-            'INSERT INTO internal_audit_reports (user_id, scope, status, score_json, findings_json, corrective_actions_created)
-             VALUES (:user_id, :scope, :status, :score_json, :findings_json, :corrective_actions_created)'
-        );
-        $statement->execute([
-            'user_id' => $userId,
-            'scope' => $report['scope'],
-            'status' => $report['status'],
-            'score_json' => $this->encodeJson($report['score']),
-            'findings_json' => $this->encodeJson($report['findings']),
-            'corrective_actions_created' => $report['corrective_actions_created'],
-        ]);
-
-        return (int) $this->pdo->lastInsertId();
-    }
-
-    /**
-     * @return array<string,mixed>|null
-     */
-    public function latestInternalAuditReport(int $userId): ?array
-    {
-        $statement = $this->pdo->prepare(
-            'SELECT id, scope, status, score_json, findings_json, corrective_actions_created, created_at
-             FROM internal_audit_reports
-             WHERE user_id = :user_id
-             ORDER BY id DESC
-             LIMIT 1'
-        );
-        $statement->execute(['user_id' => $userId]);
-        $record = $statement->fetch();
-
-        if (!is_array($record)) {
-            return null;
-        }
-
-        return [
-            'id' => (int) $record['id'],
-            'scope' => (string) $record['scope'],
-            'status' => (string) $record['status'],
-            'score' => $this->decodeJson((string) $record['score_json']),
-            'findings' => $this->decodeJson((string) $record['findings_json']),
-            'corrective_actions_created' => (int) $record['corrective_actions_created'],
-            'created_at' => (string) $record['created_at'],
-        ];
     }
 
     /**

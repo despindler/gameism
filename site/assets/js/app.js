@@ -66,7 +66,6 @@
         ismsScoreSummary: document.getElementById('isms-score-summary'),
         teachingScoreSummary: document.getElementById('teaching-score-summary'),
         incidentList: document.getElementById('incident-list'),
-        correctiveActionList: document.getElementById('corrective-action-list'),
         certificationStepper: document.getElementById('certification-stepper'),
         auditPanelBody: document.getElementById('audit-panel-body'),
         toast: document.getElementById('toast'),
@@ -456,7 +455,7 @@
                 tone: 'warning',
                 title: 'Close corrective actions',
                 body: `${openActions.length} corrective actions still need completion or effectiveness checks.`,
-                action: 'open-operations',
+                action: 'open-actions',
                 buttonText: 'Actions',
                 buttonLabel: 'Open corrective actions',
             });
@@ -1408,7 +1407,8 @@
     function renderIsmsPanel() {
         const artifacts = state.game.isms;
         const scores = state.game.score.artifacts;
-        els.ismsScoreSummary.textContent = `Inventory ${scores.assets.percent}% - Risks ${scores.risks.percent}% - Evidence ${scores.evidence.percent}%`;
+        const openActions = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
+        els.ismsScoreSummary.textContent = `Inventory ${scores.assets.percent}% - Risks ${scores.risks.percent}% - Evidence ${scores.evidence.percent}% - Actions ${openActions} open`;
 
         for (const button of els.ismsTabs.querySelectorAll('[data-isms-tab]')) {
             button.classList.toggle('active', button.dataset.ismsTab === state.activeIsmsTab);
@@ -1418,11 +1418,17 @@
             els.ismsBody.innerHTML = artifacts.assets.map(renderAssetArtifact).join('');
         } else if (state.activeIsmsTab === 'risks') {
             els.ismsBody.innerHTML = artifacts.risks.map(renderRiskArtifact).join('');
-        } else {
+        } else if (state.activeIsmsTab === 'evidence') {
             els.ismsBody.innerHTML = artifacts.evidence.map(renderEvidenceArtifact).join('');
+        } else {
+            const actions = state.game.teaching.corrective_actions;
+            els.ismsBody.innerHTML = actions.length
+                ? actions.map(renderCorrectiveActionCard).join('')
+                : '<p class="empty-state">No corrective actions have been opened.</p>';
         }
 
         bindIsmsControls();
+        bindCorrectiveActionControls(els.ismsBody);
     }
 
     function renderAssetArtifact(asset) {
@@ -1591,15 +1597,12 @@
     function renderOperationsPanel() {
         const teaching = state.game.teaching;
         const scores = state.game.score.teaching;
-        els.teachingScoreSummary.textContent = `Events ${scores.incidents.percent}% - Corrective actions ${scores.corrective_actions.percent}%`;
+        const openActions = teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
+        els.teachingScoreSummary.textContent = `Events ${scores.incidents.percent}% - ${openActions} linked actions in ISMS`;
 
         els.incidentList.innerHTML = teaching.incidents.length
             ? teaching.incidents.map(renderIncidentCard).join('')
             : '<p class="empty-state">No simulation events are available.</p>';
-
-        els.correctiveActionList.innerHTML = teaching.corrective_actions.length
-            ? teaching.corrective_actions.map(renderCorrectiveActionCard).join('')
-            : '<p class="empty-state">No corrective actions have been opened.</p>';
 
         bindOperationsControls();
     }
@@ -1745,11 +1748,15 @@
     }
 
     function renderIncidentCard(incident) {
+        const linkedAction = actionForIncident(incident.incident_key);
+        const actionButton = linkedAction
+            ? `<button type="button" data-incident-action="open-action" data-incident-key="${escapeAttr(incident.incident_key)}">Open action</button>`
+            : '';
         const buttonHtml = incident.status === 'available'
             ? `<button type="button" data-incident-action="start" data-incident-key="${escapeAttr(incident.incident_key)}" ${state.busy ? 'disabled' : ''}>Start event</button>`
             : incident.status === 'active'
-                ? `<button type="button" data-incident-action="resolve" data-incident-key="${escapeAttr(incident.incident_key)}" ${state.busy ? 'disabled' : ''}>Resolve</button>`
-                : '';
+                ? `<button type="button" data-incident-action="resolve" data-incident-key="${escapeAttr(incident.incident_key)}" ${state.busy ? 'disabled' : ''}>Resolve</button>${actionButton}`
+                : actionButton;
 
         return `
             <article class="teaching-card">
@@ -1759,14 +1766,19 @@
                 </header>
                 <p class="control-description">${escapeHtml(incident.description)}</p>
                 <p class="control-description">${escapeHtml(incident.status === 'available' ? incident.trigger_text : incident.lesson_text)}</p>
+                ${linkedAction ? `<p class="artifact-meta">Linked action: ${escapeHtml(linkedAction.title)}</p>` : ''}
                 <div class="teaching-actions">${buttonHtml}</div>
             </article>
         `;
     }
 
+    function actionForIncident(incidentKey) {
+        return state.game.teaching.corrective_actions.find((action) => action.source_type === 'incident' && action.source_key === incidentKey) || null;
+    }
+
     function renderCorrectiveActionCard(action) {
         return `
-            <article class="teaching-card">
+            <article class="teaching-card" data-action-card="${escapeAttr(action.action_key)}">
                 <header>
                     <h4>${escapeHtml(action.title)}</h4>
                     <span class="status-badge ${escapeAttr(statusClass(action.status))}">${escapeHtml(action.status)}</span>
@@ -1830,14 +1842,16 @@
                 updateIncident(button.dataset.incidentAction, button.dataset.incidentKey);
             });
         }
+    }
 
-        for (const select of els.correctiveActionList.querySelectorAll('select[data-action-key]')) {
+    function bindCorrectiveActionControls(root) {
+        for (const select of root.querySelectorAll('select[data-action-key]')) {
             select.addEventListener('change', () => {
                 updateCorrectiveAction(select.dataset.actionKey, select.dataset.actionField, select.value);
             });
         }
 
-        for (const input of els.correctiveActionList.querySelectorAll('input[data-action-key], textarea[data-action-key]')) {
+        for (const input of root.querySelectorAll('input[data-action-key], textarea[data-action-key]')) {
             input.addEventListener('blur', () => {
                 if (input.value !== input.dataset.initial) {
                     updateCorrectiveAction(input.dataset.actionKey, input.dataset.actionField, input.value);
@@ -1853,6 +1867,11 @@
     }
 
     async function updateIncident(action, incidentKey) {
+        if (action === 'open-action') {
+            openCorrectiveActions(incidentKey);
+            return;
+        }
+
         if (state.busy) {
             return;
         }
@@ -1960,6 +1979,24 @@
         els.auditPanelBody.innerHTML = renderCertificationReport(report);
     }
 
+    function openCorrectiveActions(incidentKey = '') {
+        closeDrawer();
+        state.activeIsmsTab = 'actions';
+        setPrimaryTab('isms');
+        renderIsmsPanel();
+
+        if (incidentKey) {
+            const action = actionForIncident(incidentKey);
+            const card = action
+                ? Array.from(els.ismsBody.querySelectorAll('[data-action-card]')).find((item) => item.dataset.actionCard === action.action_key)
+                : null;
+
+            if (card) {
+                card.scrollIntoView({ block: 'nearest' });
+            }
+        }
+    }
+
     function renderCertificationReport(report) {
         const sampledFindings = report.sampled_findings || [];
         const operationalConsequences = report.operational_consequences || [];
@@ -2054,6 +2091,11 @@
             state.activeIsmsTab = 'assets';
             setPrimaryTab('isms');
             renderIsmsPanel();
+            return;
+        }
+
+        if (action === 'open-actions') {
+            openCorrectiveActions();
             return;
         }
 

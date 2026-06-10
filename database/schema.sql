@@ -187,22 +187,6 @@ CREATE TABLE IF NOT EXISTS corrective_actions (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS internal_audit_reports (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    user_id INT UNSIGNED NOT NULL,
-    scope VARCHAR(220) NOT NULL,
-    status VARCHAR(60) NOT NULL,
-    score_json JSON NOT NULL,
-    findings_json JSON NOT NULL,
-    corrective_actions_created INT UNSIGNED NOT NULL DEFAULT 0,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    KEY idx_internal_audit_reports_user_created (user_id, created_at),
-    CONSTRAINT fk_internal_audit_reports_user
-        FOREIGN KEY (user_id) REFERENCES users (id)
-        ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS app_settings (
     setting_key VARCHAR(120) NOT NULL,
     setting_value TEXT NOT NULL,

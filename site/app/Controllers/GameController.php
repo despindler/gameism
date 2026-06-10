@@ -119,21 +119,6 @@ final class GameController
     /**
      * @return array<string,mixed>
      */
-    public function runInternalAudit(): array
-    {
-        $user = $this->auth->requireUser();
-        $result = $this->game->runInternalAudit($user);
-
-        return [
-            'ok' => true,
-            'report' => $result['report'],
-            'game_state' => $result['game_state'],
-        ];
-    }
-
-    /**
-     * @return array<string,mixed>
-     */
     public function runAudit(): array
     {
         $user = $this->auth->requireUser();

@@ -33,11 +33,12 @@ After login, the player configures a small physician office from the floor plan 
 - Floor-plan view modes overlay readiness, evidence, risk, and audit status directly on each clickable asset.
 - Floor-plan assets open a device profile modal with linked controls, risks, evidence, findings, and corrective actions.
 - Device configuration happens inside the modal instead of a permanent side panel.
-- The Office tab also includes an Operations section for simulation events and corrective actions.
+- The Office tab also includes an Operations section for simulation events and links to their follow-up work.
 - Inventory items track owners, classification, criticality, and verification status.
 - Risk register items track likelihood, impact, owner, and treatment status.
 - Evidence items track whether audit evidence is missing, draft, ready, or reviewed.
 - Simulation events are persisted as durable timeline events and create linked corrective actions.
+- Corrective actions are managed in the ISMS `Actions` tab as a formal improvement register.
 - Offline timeline progression can activate a bounded number of events when the player returns after enough elapsed time.
 - Corrective actions must be completed and verified before related active events can be resolved.
 - Readiness scores combine controls and ISMS artifacts across security, documentation, resilience, and audit categories.

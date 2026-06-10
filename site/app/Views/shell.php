@@ -144,12 +144,8 @@
                 </header>
                 <div class="teaching-grid operations-grid">
                     <section>
-                        <h3>Incident Drills</h3>
+                        <h3>Simulation Events</h3>
                         <div id="incident-list" class="teaching-list"></div>
-                    </section>
-                    <section>
-                        <h3>Corrective Actions</h3>
-                        <div id="corrective-action-list" class="teaching-list"></div>
                     </section>
                 </div>
             </section>
@@ -166,6 +162,7 @@
                     <button type="button" data-isms-tab="assets">Inventory</button>
                     <button type="button" data-isms-tab="risks">Risks</button>
                     <button type="button" data-isms-tab="evidence">Evidence</button>
+                    <button type="button" data-isms-tab="actions">Actions</button>
                 </div>
             </header>
             <div id="isms-body" class="isms-body"></div>

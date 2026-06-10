@@ -534,15 +534,14 @@ How to verify:
 
 Known issues and decisions:
 
-- The older internal-audit backend remains in place; this milestone focused on strengthening the single visible Audit tab.
+- Resolved in Milestone 9: the older internal-audit backend has been removed, leaving one simulated Audit backend flow.
 - Operational audit consequences currently sample incident-backed timeline events only.
 - Resolved event history is intentionally less severe than active operational disruption, but it still asks the player to maintain response and effectiveness evidence.
 
 Next steps:
 
-- Decide whether to remove or merge the internal-audit backend under the prototype clean-slate rule.
 - Add difficulty and guidance controls for the Advisor drawer.
-- Expand the event catalog beyond the current incident drills.
+- Expand the event catalog beyond the current incident events.
 
 ## Milestone 8 - Timeline Events As Event State
 
@@ -580,3 +579,74 @@ Next steps:
 - Rename compatibility APIs and state keys when the frontend is ready for a broader event-model cleanup.
 - Add more event types beyond the initial incident scenarios.
 - Add difficulty and guidance controls for the Advisor drawer.
+
+## Milestone 9 - Single Audit Backend
+
+Date: 2026-06-10
+
+Goal: Finish simplifying the Audit model by removing the obsolete internal-audit backend path.
+
+What changed:
+
+- Removed the `/api/run-internal-audit` route.
+- Removed `GameController::runInternalAudit`.
+- Removed `GameStateService::runInternalAudit`.
+- Removed internal-audit report persistence methods from `GameStateRepository`.
+- Removed `latest_internal_audit` from `game_state.teaching`.
+- Removed the `internal_audit_reports` table from the current schema.
+- Removed the obsolete internal-audit action-limit seed setting.
+- Updated smoke tests to assert that `internal_audit_reports` is no longer part of the current schema and that game state no longer exposes latest internal audit state.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- Internal audit remains represented only as ordinary audit evidence/control readiness where the scenario asks for it, not as a separate playable audit mode.
+- Existing destructive test reset helpers still drop the old table if it exists in a reused local database, but the current schema no longer recreates it.
+
+Next steps:
+
+- Add difficulty and guidance controls for the Advisor drawer.
+- Resolved in Milestone 10: corrective actions now live under ISMS Actions.
+- Continue broadening the event catalog beyond the initial incident scenarios.
+
+## Milestone 10 - ISMS Corrective Action Register
+
+Date: 2026-06-10
+
+Goal: Align corrective actions with the ISMS owner role by moving them out of Office Operations and into the ISMS workbench.
+
+What changed:
+
+- Added an `Actions` sub-tab to the ISMS Workbench.
+- Moved corrective-action cards and edit controls from Office Operations into `ISMS > Actions`.
+- Kept Office Operations focused on simulation events and their operational impact.
+- Added an `Open action` bridge from active/resolved event cards to the linked ISMS corrective action.
+- Routed Advisor corrective-action guidance to `ISMS > Actions`.
+- Updated Playwright coverage to verify that actions are no longer shown in Office Operations and that the linked action opens in ISMS.
+- Updated README to describe corrective actions as the ISMS improvement register.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- The backend still exposes corrective actions inside `game_state.teaching` until the broader `teaching` state name is retired.
+- Office event cards link to the action register rather than embedding action controls, preserving the Office/ISMS role split.
+
+Next steps:
+
+- Add difficulty and guidance controls for the Advisor drawer.
+- Continue broadening the event catalog beyond the initial incident scenarios.
+- Rename compatibility event APIs and `teaching` state keys when the frontend is ready for a broader event-model cleanup.

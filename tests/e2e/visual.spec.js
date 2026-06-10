@@ -153,6 +153,7 @@ test('authenticated office simulation renders and main workflow works', async ({
   await page.getByRole('tab', { name: 'ISMS' }).click();
   await expect(page.getByRole('tab', { name: 'ISMS' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('heading', { name: 'ISMS Workbench' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Actions', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Risks', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Unauthorized access to Cloud EHR' })).toBeVisible();
 
@@ -163,7 +164,13 @@ test('authenticated office simulation renders and main workflow works', async ({
   await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible();
   await page.getByRole('button', { name: 'Start event' }).first().click();
   await expect(page.getByText('Timeline event started.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Corrective Actions' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Open action' })).toBeVisible();
+  await page.getByRole('button', { name: 'Open action' }).click();
+  await expect(page.getByRole('tab', { name: 'ISMS' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('button', { name: 'Actions', exact: true })).toHaveClass(/active/);
   await expect(page.getByRole('heading', { name: /Close phishing event gaps|Prove containment|Make backup recovery/ })).toBeVisible();
+  await page.getByRole('tab', { name: 'Office' }).click();
   await expect(page.locator('#operations-impacts')).toContainText('Current mitigation');
   await page.getByRole('button', { name: 'Timeline' }).click();
   await expect(drawer.locator('#timeline-list')).toContainText(/Phishing attempt|Lost nurse laptop|Backup restore failure/);
