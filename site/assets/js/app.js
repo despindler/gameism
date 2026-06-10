@@ -64,8 +64,8 @@
         ismsTabs: document.getElementById('isms-tabs'),
         ismsBody: document.getElementById('isms-body'),
         ismsScoreSummary: document.getElementById('isms-score-summary'),
-        teachingScoreSummary: document.getElementById('teaching-score-summary'),
-        incidentList: document.getElementById('incident-list'),
+        simulationScoreSummary: document.getElementById('simulation-score-summary'),
+        eventList: document.getElementById('event-list'),
         certificationStepper: document.getElementById('certification-stepper'),
         auditPanelBody: document.getElementById('audit-panel-body'),
         toast: document.getElementById('toast'),
@@ -310,7 +310,7 @@
     function renderTimeline() {
         const items = timelineItems();
         const activeCount = state.game.timeline.active_count;
-        const openActionCount = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
+        const openActionCount = state.game.simulation.corrective_actions.filter(isCorrectiveActionOpen).length;
         els.timelineSummary.textContent = `${activeCount} active events - ${openActionCount} open corrective actions`;
 
         els.timelineList.innerHTML = items.map((item) => `
@@ -324,7 +324,7 @@
 
     function renderDrawerBadge() {
         const activeEvents = state.game.timeline.active_count;
-        const openActions = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
+        const openActions = state.game.simulation.corrective_actions.filter(isCorrectiveActionOpen).length;
         const priorityGuidance = guidanceItems().filter((item) => item.tone === 'critical' || item.tone === 'warning').length;
         const badgeCount = activeEvents + openActions + priorityGuidance;
 
@@ -352,7 +352,7 @@
             });
         }
 
-        for (const action of state.game.teaching.corrective_actions) {
+        for (const action of state.game.simulation.corrective_actions) {
             items.push({
                 tone: 'action',
                 meta: `Corrective action - ${action.status}`,
@@ -449,7 +449,7 @@
             });
         }
 
-        const openActions = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen);
+        const openActions = state.game.simulation.corrective_actions.filter(isCorrectiveActionOpen);
         if (openActions.length > 0) {
             items.push({
                 tone: 'warning',
@@ -461,22 +461,22 @@
             });
         }
 
-        const activeIncident = state.game.teaching.incidents.find((incident) => incident.status === 'active');
-        const availableIncident = state.game.teaching.incidents.find((incident) => incident.status === 'available');
-        if (activeIncident) {
+        const activeEvent = state.game.simulation.events.find((event) => event.status === 'active');
+        const availableEvent = state.game.simulation.events.find((event) => event.status === 'available');
+        if (activeEvent) {
             items.push({
                 tone: 'warning',
                 title: 'Resolve active event',
-                body: `${activeIncident.title} is active. Finish evidence and action checks before resolving it.`,
+                body: `${activeEvent.title} is active. Finish evidence and action checks before resolving it.`,
                 action: 'open-operations',
                 buttonText: 'Operations',
                 buttonLabel: 'Open active event',
             });
-        } else if (availableIncident) {
+        } else if (availableEvent) {
             items.push({
                 tone: 'ready',
                 title: 'Start a timeline event',
-                body: `${availableIncident.title} can turn current gaps into corrective-action practice.`,
+                body: `${availableEvent.title} can turn current gaps into corrective-action practice.`,
                 action: 'open-operations',
                 buttonText: 'Operations',
                 buttonLabel: 'Open simulation events',
@@ -1247,7 +1247,7 @@
         const findings = findingsForObject(object.object_key);
         const risks = linkedItems(state.game.isms.risks, object.object_key);
         const evidence = linkedItems(state.game.isms.evidence, object.object_key);
-        const actions = linkedItems(state.game.teaching.corrective_actions, object.object_key);
+        const actions = linkedItems(state.game.simulation.corrective_actions, object.object_key);
         const enabledControls = object.controls.filter((control) => control.enabled).length;
 
         els.deviceModalBody.innerHTML = `
@@ -1407,7 +1407,7 @@
     function renderIsmsPanel() {
         const artifacts = state.game.isms;
         const scores = state.game.score.artifacts;
-        const openActions = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
+        const openActions = state.game.simulation.corrective_actions.filter(isCorrectiveActionOpen).length;
         els.ismsScoreSummary.textContent = `Inventory ${scores.assets.percent}% - Risks ${scores.risks.percent}% - Evidence ${scores.evidence.percent}% - Actions ${openActions} open`;
 
         for (const button of els.ismsTabs.querySelectorAll('[data-isms-tab]')) {
@@ -1421,7 +1421,7 @@
         } else if (state.activeIsmsTab === 'evidence') {
             els.ismsBody.innerHTML = artifacts.evidence.map(renderEvidenceArtifact).join('');
         } else {
-            const actions = state.game.teaching.corrective_actions;
+            const actions = state.game.simulation.corrective_actions;
             els.ismsBody.innerHTML = actions.length
                 ? actions.map(renderCorrectiveActionCard).join('')
                 : '<p class="empty-state">No corrective actions have been opened.</p>';
@@ -1595,13 +1595,13 @@
     }
 
     function renderOperationsPanel() {
-        const teaching = state.game.teaching;
-        const scores = state.game.score.teaching;
-        const openActions = teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
-        els.teachingScoreSummary.textContent = `Events ${scores.incidents.percent}% - ${openActions} linked actions in ISMS`;
+        const simulation = state.game.simulation;
+        const scores = state.game.score.simulation;
+        const openActions = simulation.corrective_actions.filter(isCorrectiveActionOpen).length;
+        els.simulationScoreSummary.textContent = `Events ${scores.events.percent}% - ${openActions} linked actions in ISMS`;
 
-        els.incidentList.innerHTML = teaching.incidents.length
-            ? teaching.incidents.map(renderIncidentCard).join('')
+        els.eventList.innerHTML = simulation.events.length
+            ? simulation.events.map(renderEventCard).join('')
             : '<p class="empty-state">No simulation events are available.</p>';
 
         bindOperationsControls();
@@ -1699,7 +1699,7 @@
         const scores = state.game.score.artifacts;
         const evidenceIncomplete = state.game.isms.evidence.filter(isEvidenceIncomplete).length;
         const untreatedRisks = state.game.isms.risks.filter(isRiskUntreated).length;
-        const openActions = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
+        const openActions = state.game.simulation.corrective_actions.filter(isCorrectiveActionOpen).length;
         const hasAuditReport = Boolean(report);
         const evidenceReady = scores.evidence.percent >= 80 && evidenceIncomplete === 0;
         const risksReady = scores.risks.percent >= 80 && untreatedRisks === 0;
@@ -1747,38 +1747,38 @@
         }));
     }
 
-    function renderIncidentCard(incident) {
-        const linkedAction = actionForIncident(incident.incident_key);
+    function renderEventCard(event) {
+        const linkedAction = actionForEvent(event.event_key);
         const actionButton = linkedAction
-            ? `<button type="button" data-incident-action="open-action" data-incident-key="${escapeAttr(incident.incident_key)}">Open action</button>`
+            ? `<button type="button" data-event-action="open-action" data-event-key="${escapeAttr(event.event_key)}">Open action</button>`
             : '';
-        const buttonHtml = incident.status === 'available'
-            ? `<button type="button" data-incident-action="start" data-incident-key="${escapeAttr(incident.incident_key)}" ${state.busy ? 'disabled' : ''}>Start event</button>`
-            : incident.status === 'active'
-                ? `<button type="button" data-incident-action="resolve" data-incident-key="${escapeAttr(incident.incident_key)}" ${state.busy ? 'disabled' : ''}>Resolve</button>${actionButton}`
+        const buttonHtml = event.status === 'available'
+            ? `<button type="button" data-event-action="start" data-event-key="${escapeAttr(event.event_key)}" ${state.busy ? 'disabled' : ''}>Start event</button>`
+            : event.status === 'active'
+                ? `<button type="button" data-event-action="resolve" data-event-key="${escapeAttr(event.event_key)}" ${state.busy ? 'disabled' : ''}>Resolve</button>${actionButton}`
                 : actionButton;
 
         return `
-            <article class="teaching-card">
+            <article class="event-card">
                 <header>
-                    <h4>${escapeHtml(incident.title)}</h4>
-                    <span class="status-badge ${escapeAttr(statusClass(incident.status))}">${escapeHtml(incident.status)}</span>
+                    <h4>${escapeHtml(event.title)}</h4>
+                    <span class="status-badge ${escapeAttr(statusClass(event.status))}">${escapeHtml(event.status)}</span>
                 </header>
-                <p class="control-description">${escapeHtml(incident.description)}</p>
-                <p class="control-description">${escapeHtml(incident.status === 'available' ? incident.trigger_text : incident.lesson_text)}</p>
+                <p class="control-description">${escapeHtml(event.description)}</p>
+                <p class="control-description">${escapeHtml(event.status === 'available' ? event.trigger_text : event.lesson_text)}</p>
                 ${linkedAction ? `<p class="artifact-meta">Linked action: ${escapeHtml(linkedAction.title)}</p>` : ''}
-                <div class="teaching-actions">${buttonHtml}</div>
+                <div class="event-actions">${buttonHtml}</div>
             </article>
         `;
     }
 
-    function actionForIncident(incidentKey) {
-        return state.game.teaching.corrective_actions.find((action) => action.source_type === 'incident' && action.source_key === incidentKey) || null;
+    function actionForEvent(eventKey) {
+        return state.game.simulation.corrective_actions.find((action) => action.source_type === 'event' && action.source_key === eventKey) || null;
     }
 
     function renderCorrectiveActionCard(action) {
         return `
-            <article class="teaching-card" data-action-card="${escapeAttr(action.action_key)}">
+            <article class="event-card" data-action-card="${escapeAttr(action.action_key)}">
                 <header>
                     <h4>${escapeHtml(action.title)}</h4>
                     <span class="status-badge ${escapeAttr(statusClass(action.status))}">${escapeHtml(action.status)}</span>
@@ -1837,9 +1837,9 @@
     }
 
     function bindOperationsControls() {
-        for (const button of els.incidentList.querySelectorAll('[data-incident-action]')) {
+        for (const button of els.eventList.querySelectorAll('[data-event-action]')) {
             button.addEventListener('click', () => {
-                updateIncident(button.dataset.incidentAction, button.dataset.incidentKey);
+                updateEvent(button.dataset.eventAction, button.dataset.eventKey);
             });
         }
     }
@@ -1866,9 +1866,9 @@
         }
     }
 
-    async function updateIncident(action, incidentKey) {
+    async function updateEvent(action, eventKey) {
         if (action === 'open-action') {
-            openCorrectiveActions(incidentKey);
+            openCorrectiveActions(eventKey);
             return;
         }
 
@@ -1879,11 +1879,11 @@
         state.busy = true;
 
         try {
-            const endpoint = action === 'resolve' ? 'resolve-incident' : 'start-incident';
+            const endpoint = action === 'resolve' ? 'resolve-event' : 'start-event';
             const payload = await api(endpoint, {
                 method: 'POST',
                 body: {
-                    incident_key: incidentKey,
+                    event_key: eventKey,
                 },
             });
             state.game = payload.game_state;
@@ -1979,14 +1979,14 @@
         els.auditPanelBody.innerHTML = renderCertificationReport(report);
     }
 
-    function openCorrectiveActions(incidentKey = '') {
+    function openCorrectiveActions(eventKey = '') {
         closeDrawer();
         state.activeIsmsTab = 'actions';
         setPrimaryTab('isms');
         renderIsmsPanel();
 
-        if (incidentKey) {
-            const action = actionForIncident(incidentKey);
+        if (eventKey) {
+            const action = actionForEvent(eventKey);
             const card = action
                 ? Array.from(els.ismsBody.querySelectorAll('[data-action-card]')).find((item) => item.dataset.actionCard === action.action_key)
                 : null;

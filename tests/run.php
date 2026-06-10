@@ -39,9 +39,9 @@ assertTrue(count($initial['map']['objects']) === 10, 'initial office has ten int
 assertTrue(count($initial['isms']['assets']) === 8, 'initial ISMS inventory has eight assets');
 assertTrue(count($initial['isms']['risks']) === 6, 'initial risk register has six risks');
 assertTrue(count($initial['isms']['evidence']) === 8, 'initial evidence checklist has eight items');
-assertTrue(count($initial['teaching']['incidents']) === 3, 'initial scenario has three simulation events');
-assertTrue(count($initial['teaching']['corrective_actions']) === 0, 'initial scenario has no corrective actions');
-assertTrue(!array_key_exists('latest_internal_audit', $initial['teaching']), 'game state no longer exposes latest internal audit');
+assertTrue(count($initial['simulation']['events']) === 3, 'initial scenario has three simulation events');
+assertTrue(count($initial['simulation']['corrective_actions']) === 0, 'initial scenario has no corrective actions');
+assertTrue(!array_key_exists('teaching', $initial), 'game state no longer exposes teaching state');
 assertTrue(count($initial['timeline']['events']) === 0, 'initial timeline has no generated event instances');
 assertTrue($initial['score']['overall']['percent'] < 60, 'initial scenario starts with visible gaps');
 assertTrue($initial['operations']['clinical_capacity_percent'] === 100, 'initial office has full clinical capacity before incidents');
@@ -90,52 +90,53 @@ try {
 }
 assertTrue($invalidStatusRejected, 'invalid evidence status is rejected with a stable error code');
 
-$incidentStarted = $game->startIncident($user, 'backup_restore_failure');
-assertTrue($incidentStarted['teaching']['incidents'][0]['status'] === 'active', 'starting an incident marks it active');
-assertTrue(count($incidentStarted['teaching']['corrective_actions']) === 1, 'starting an incident creates a corrective action');
-assertTrue($incidentStarted['operations']['data_availability_percent'] < $evidenceReady['operations']['data_availability_percent'], 'active backup incident reduces data availability');
-assertTrue($incidentStarted['operations']['patient_delay_minutes'] > $evidenceReady['operations']['patient_delay_minutes'], 'active backup incident creates patient delay');
-assertTrue($incidentStarted['operations']['closure_risk_percent'] > $evidenceReady['operations']['closure_risk_percent'], 'active backup incident increases closure risk');
-assertTrue(count($incidentStarted['operations']['active_impacts']) === 1, 'active incident creates one operational impact');
-assertTrue(count($incidentStarted['timeline']['events']) === 1, 'starting an incident creates a timeline event instance');
-assertTrue($incidentStarted['timeline']['events'][0]['event_key'] === 'incident:backup_restore_failure', 'timeline event uses a stable incident event key');
-assertTrue($incidentStarted['timeline']['events'][0]['status'] === 'active', 'timeline event is active while incident is active');
+$eventStarted = $game->startEvent($user, 'backup_restore_failure');
+assertTrue($eventStarted['simulation']['events'][0]['status'] === 'active', 'starting an event marks it active');
+assertTrue(count($eventStarted['simulation']['corrective_actions']) === 1, 'starting an event creates a corrective action');
+assertTrue($eventStarted['operations']['data_availability_percent'] < $evidenceReady['operations']['data_availability_percent'], 'active backup event reduces data availability');
+assertTrue($eventStarted['operations']['patient_delay_minutes'] > $evidenceReady['operations']['patient_delay_minutes'], 'active backup event creates patient delay');
+assertTrue($eventStarted['operations']['closure_risk_percent'] > $evidenceReady['operations']['closure_risk_percent'], 'active backup event increases closure risk');
+assertTrue(count($eventStarted['operations']['active_impacts']) === 1, 'active event creates one operational impact');
+assertTrue(count($eventStarted['timeline']['events']) === 1, 'starting an event creates a timeline event instance');
+assertTrue($eventStarted['timeline']['events'][0]['event_key'] === 'event:backup_restore_failure', 'timeline event uses a stable event key');
+assertTrue($eventStarted['timeline']['events'][0]['source_type'] === 'event', 'timeline event uses event source type');
+assertTrue($eventStarted['timeline']['events'][0]['status'] === 'active', 'timeline event is active while event is active');
 
-$activeIncidentAudit = $game->runAudit($user);
-assertTrue(count($activeIncidentAudit['report']['operational_consequences']) === 1, 'audit report includes active operational consequences');
-assertTrue($activeIncidentAudit['report']['operational_consequences'][0]['status'] === 'active', 'active incident is sampled as active audit consequence');
-assertTrue($activeIncidentAudit['report']['operational_consequences'][0]['severity'] === 'major', 'active degraded operations create a major audit consequence');
-assertTrue(isset($activeIncidentAudit['game_state']['latest_audit']['score']['operational_consequences']), 'latest audit persists operational consequences');
+$activeEventAudit = $game->runAudit($user);
+assertTrue(count($activeEventAudit['report']['operational_consequences']) === 1, 'audit report includes active operational consequences');
+assertTrue($activeEventAudit['report']['operational_consequences'][0]['status'] === 'active', 'active event is sampled as active audit consequence');
+assertTrue($activeEventAudit['report']['operational_consequences'][0]['severity'] === 'major', 'active degraded operations create a major audit consequence');
+assertTrue(isset($activeEventAudit['game_state']['latest_audit']['score']['operational_consequences']), 'latest audit persists operational consequences');
 
 $unverifiedResolutionRejected = false;
 try {
-    $game->resolveIncident($user, 'backup_restore_failure');
+    $game->resolveEvent($user, 'backup_restore_failure');
 } catch (ApiException $exception) {
     $unverifiedResolutionRejected = $exception->apiCode() === 'CORRECTIVE_ACTION_NOT_VERIFIED';
 }
-assertTrue($unverifiedResolutionRejected, 'incident cannot be resolved before corrective action verification');
+assertTrue($unverifiedResolutionRejected, 'event cannot be resolved before corrective action verification');
 
-$correctiveUpdated = $game->updateCorrectiveAction($user, 'incident_backup_restore_failure', [
+$correctiveUpdated = $game->updateCorrectiveAction($user, 'event_backup_restore_failure', [
     'status' => 'verified',
     'verification_status' => 'effective',
 ]);
-assertTrue($correctiveUpdated['teaching']['corrective_actions'][0]['status'] === 'verified', 'corrective action can be verified');
+assertTrue($correctiveUpdated['simulation']['corrective_actions'][0]['status'] === 'verified', 'corrective action can be verified');
 
-$incidentResolved = $game->resolveIncident($user, 'backup_restore_failure');
-$resolvedIncident = array_values(array_filter(
-    $incidentResolved['teaching']['incidents'],
-    static fn (array $incident): bool => $incident['incident_key'] === 'backup_restore_failure'
+$eventResolved = $game->resolveEvent($user, 'backup_restore_failure');
+$resolvedEvent = array_values(array_filter(
+    $eventResolved['simulation']['events'],
+    static fn (array $event): bool => $event['event_key'] === 'backup_restore_failure'
 ))[0];
-assertTrue($resolvedIncident['status'] === 'resolved', 'verified corrective action allows incident resolution');
-assertTrue($incidentResolved['operations']['data_availability_percent'] > $incidentStarted['operations']['data_availability_percent'], 'resolving incident restores data availability');
-assertTrue($incidentResolved['operations']['patient_delay_minutes'] < $incidentStarted['operations']['patient_delay_minutes'], 'resolving incident reduces patient delay');
-assertTrue(count($incidentResolved['operations']['active_impacts']) === 0, 'resolved incident clears active operational impacts');
-assertTrue($incidentResolved['timeline']['events'][0]['status'] === 'resolved', 'resolving incident resolves timeline event');
-assertTrue($incidentResolved['timeline']['events'][0]['resolved_at'] !== null, 'resolved timeline event records resolution time');
+assertTrue($resolvedEvent['status'] === 'resolved', 'verified corrective action allows event resolution');
+assertTrue($eventResolved['operations']['data_availability_percent'] > $eventStarted['operations']['data_availability_percent'], 'resolving event restores data availability');
+assertTrue($eventResolved['operations']['patient_delay_minutes'] < $eventStarted['operations']['patient_delay_minutes'], 'resolving event reduces patient delay');
+assertTrue(count($eventResolved['operations']['active_impacts']) === 0, 'resolved event clears active operational impacts');
+assertTrue($eventResolved['timeline']['events'][0]['status'] === 'resolved', 'resolving event resolves timeline event');
+assertTrue($eventResolved['timeline']['events'][0]['resolved_at'] !== null, 'resolved timeline event records resolution time');
 
 $invalidActionStatusRejected = false;
 try {
-    $game->updateCorrectiveAction($user, 'incident_backup_restore_failure', ['status' => 'closed']);
+    $game->updateCorrectiveAction($user, 'event_backup_restore_failure', ['status' => 'closed']);
 } catch (ApiException $exception) {
     $invalidActionStatusRejected = $exception->apiCode() === 'INVALID_CORRECTIVE_ACTION_STATUS';
 }
@@ -163,8 +164,8 @@ $pdo->exec('UPDATE timeline_states SET last_advanced_at = UTC_TIMESTAMP() - INTE
 $timelineAdvanced = $game->stateForUser($timelineUser);
 assertTrue($timelineAdvanced['timeline']['active_count'] === 1, 'offline progression creates one active timeline event');
 assertTrue(count($timelineAdvanced['timeline']['events']) === 1, 'offline progression is bounded to one event');
-assertTrue($timelineAdvanced['teaching']['incidents'][0]['status'] === 'active', 'offline progression activates the next available event');
-assertTrue(count($timelineAdvanced['teaching']['corrective_actions']) === 1, 'offline progression creates a corrective action for the event');
+assertTrue($timelineAdvanced['simulation']['events'][0]['status'] === 'active', 'offline progression activates the next available event');
+assertTrue(count($timelineAdvanced['simulation']['corrective_actions']) === 1, 'offline progression creates a corrective action for the event');
 $timelineRepeated = $game->stateForUser($timelineUser);
 assertTrue(count($timelineRepeated['timeline']['events']) === 1, 'repeated game-state reads do not duplicate offline events');
 $pdo->exec('UPDATE timeline_states SET last_advanced_at = UTC_TIMESTAMP() - INTERVAL 3 HOUR WHERE user_id = ' . (int) $timelineUser['id']);

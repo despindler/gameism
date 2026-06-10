@@ -70,15 +70,15 @@ final class GameController
     /**
      * @return array<string,mixed>
      */
-    public function startIncident(Request $request): array
+    public function startEvent(Request $request): array
     {
         $user = $this->auth->requireUser();
 
         return [
             'ok' => true,
-            'game_state' => $this->game->startIncident(
+            'game_state' => $this->game->startEvent(
                 $user,
-                $request->string('incident_key')
+                $request->string('event_key')
             ),
         ];
     }
@@ -86,15 +86,15 @@ final class GameController
     /**
      * @return array<string,mixed>
      */
-    public function resolveIncident(Request $request): array
+    public function resolveEvent(Request $request): array
     {
         $user = $this->auth->requireUser();
 
         return [
             'ok' => true,
-            'game_state' => $this->game->resolveIncident(
+            'game_state' => $this->game->resolveEvent(
                 $user,
-                $request->string('incident_key')
+                $request->string('event_key')
             ),
         ];
     }

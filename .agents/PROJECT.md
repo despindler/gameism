@@ -570,14 +570,11 @@ How to verify:
 
 Known issues and decisions:
 
-- API method names still use `startIncident` and `resolveIncident` as a compatibility layer around timeline events.
-- The catalog method is still named `incidentDrills`; renaming it belongs with a broader event-catalog cleanup.
-- The visible game state still exposes `teaching.incidents` until Operations/Events state naming is refactored.
+- Resolved in Milestone 11: current API, catalog, score, and game-state names now use event/simulation terminology.
 
 Next steps:
 
-- Rename compatibility APIs and state keys when the frontend is ready for a broader event-model cleanup.
-- Add more event types beyond the initial incident scenarios.
+- Add more event types beyond the initial event scenarios.
 - Add difficulty and guidance controls for the Advisor drawer.
 
 ## Milestone 9 - Single Audit Backend
@@ -642,11 +639,49 @@ How to verify:
 
 Known issues and decisions:
 
-- The backend still exposes corrective actions inside `game_state.teaching` until the broader `teaching` state name is retired.
+- Resolved in Milestone 11: corrective actions are now exposed inside `game_state.simulation`.
 - Office event cards link to the action register rather than embedding action controls, preserving the Office/ISMS role split.
 
 Next steps:
 
 - Add difficulty and guidance controls for the Advisor drawer.
-- Continue broadening the event catalog beyond the initial incident scenarios.
-- Rename compatibility event APIs and `teaching` state keys when the frontend is ready for a broader event-model cleanup.
+- Continue broadening the event catalog beyond the initial event scenarios.
+
+## Milestone 11 - Event Naming And State Cleanup
+
+Date: 2026-06-10
+
+Goal: Remove obsolete Teaching/incident-drill naming from the current runtime event model so future simulation milestones can build on clearer contracts.
+
+What changed:
+
+- Renamed `GameCatalog::incidentDrills()` to `GameCatalog::eventScenarios()`.
+- Replaced `game_state.teaching` with `game_state.simulation`.
+- Replaced `score.teaching` with `score.simulation`.
+- Replaced simulation event rows exposed as `incidents` with `events`.
+- Replaced event scenario keys exposed as `incident_key` with `event_key`.
+- Replaced `/api/start-incident` and `/api/resolve-incident` with `/api/start-event` and `/api/resolve-event`.
+- Renamed controller, service, and repository methods from incident-oriented names to event-oriented names.
+- Timeline events created by simulation scenarios now use `source_type = event` and stable keys like `event:backup_restore_failure`.
+- Corrective actions created from simulation events now use keys like `event_backup_restore_failure` and `source_type = event`.
+- Updated frontend state access, event-card controls, and CSS hooks to use simulation/event terminology.
+- Updated smoke tests to assert the new `simulation` state contract.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- The scenario still contains event content about information-security incidents, and the ISMS still contains an `incident_procedure` control/evidence item. Those terms remain because they are domain content, not obsolete architecture names.
+- The event catalog is still small; expanding it is the next simulation milestone.
+
+Next steps:
+
+- Finish `UPDATE.md` Milestone 4 by adding a fuller event catalog and richer event context.
+- Finish `UPDATE.md` Milestone 5 by making offline generation posture-aware.
+- Add difficulty and guidance controls for the Advisor drawer.

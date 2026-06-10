@@ -658,11 +658,11 @@ final class GameCatalog
     /**
      * @return list<array<string,mixed>>
      */
-    public static function incidentDrills(): array
+    public static function eventScenarios(): array
     {
         return [
             [
-                'incident_key' => 'phishing_ehr_password',
+                'event_key' => 'phishing_ehr_password',
                 'object_key' => 'ehr_cloud',
                 'title' => 'Phishing attempt against EHR access',
                 'description' => 'A receptionist reports an email asking them to confirm their Cloud EHR password on a lookalike page.',
@@ -676,7 +676,7 @@ final class GameCatalog
                 'owner' => 'Practice Manager',
             ],
             [
-                'incident_key' => 'lost_nurse_laptop',
+                'event_key' => 'lost_nurse_laptop',
                 'object_key' => 'nurse_laptop',
                 'title' => 'Lost nurse laptop',
                 'description' => 'A nurse cannot find a laptop after a home visit and the practice must judge exposure and recovery steps.',
@@ -690,7 +690,7 @@ final class GameCatalog
                 'owner' => 'IT Support',
             ],
             [
-                'incident_key' => 'backup_restore_failure',
+                'event_key' => 'backup_restore_failure',
                 'object_key' => 'backup_nas',
                 'title' => 'Backup restore failure',
                 'description' => 'A restore test fails because the backup job ran but the recovery procedure was never verified.',

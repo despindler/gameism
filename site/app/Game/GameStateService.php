@@ -29,9 +29,9 @@ final class GameStateService
         $repository->advanceTimeline($user['id']);
         $objects = $repository->objects($user['id']);
         $isms = $repository->ismsArtifacts($user['id']);
-        $teaching = $repository->teachingState($user['id']);
+        $simulation = $repository->simulationState($user['id']);
         $timeline = $repository->timelineState($user['id']);
-        $evaluation = $this->scoring->evaluate($objects, $isms, $teaching);
+        $evaluation = $this->scoring->evaluate($objects, $isms, $simulation);
 
         return [
             'player' => [
@@ -49,9 +49,9 @@ final class GameStateService
                 'objects' => $this->hydrateObjects($objects, $evaluation['object_scores']),
             ],
             'isms' => $isms,
-            'teaching' => $teaching,
+            'simulation' => $simulation,
             'timeline' => $timeline,
-            'operations' => $this->operationalState($objects, $isms, $teaching),
+            'operations' => $this->operationalState($objects, $isms, $simulation),
             'score' => $evaluation['score'],
             'findings' => $evaluation['findings'],
             'latest_audit' => $repository->latestAuditReport($user['id']),
@@ -150,17 +150,17 @@ final class GameStateService
      * @param array{id:int,username:string,display_name:string,role:string} $user
      * @return array<string,mixed>
      */
-    public function startIncident(array $user, string $incidentKey): array
+    public function startEvent(array $user, string $eventKey): array
     {
-        $incidentKey = trim($incidentKey);
+        $eventKey = trim($eventKey);
 
-        if ($incidentKey === '') {
-            throw new ApiException('INVALID_INCIDENT', 400, 'An incident key is required.');
+        if ($eventKey === '') {
+            throw new ApiException('INVALID_EVENT', 400, 'An event key is required.');
         }
 
         $repository = $this->repository();
         $repository->ensureInitialized($user['id']);
-        $repository->startIncident($user['id'], $incidentKey);
+        $repository->startEvent($user['id'], $eventKey);
 
         return $this->stateForUser($user);
     }
@@ -169,17 +169,17 @@ final class GameStateService
      * @param array{id:int,username:string,display_name:string,role:string} $user
      * @return array<string,mixed>
      */
-    public function resolveIncident(array $user, string $incidentKey): array
+    public function resolveEvent(array $user, string $eventKey): array
     {
-        $incidentKey = trim($incidentKey);
+        $eventKey = trim($eventKey);
 
-        if ($incidentKey === '') {
-            throw new ApiException('INVALID_INCIDENT', 400, 'An incident key is required.');
+        if ($eventKey === '') {
+            throw new ApiException('INVALID_EVENT', 400, 'An event key is required.');
         }
 
         $repository = $this->repository();
         $repository->ensureInitialized($user['id']);
-        $repository->resolveIncident($user['id'], $incidentKey);
+        $repository->resolveEvent($user['id'], $eventKey);
 
         return $this->stateForUser($user);
     }
@@ -215,10 +215,10 @@ final class GameStateService
         $repository->advanceTimeline($user['id']);
         $objects = $repository->objects($user['id']);
         $isms = $repository->ismsArtifacts($user['id']);
-        $teaching = $repository->teachingState($user['id']);
+        $simulation = $repository->simulationState($user['id']);
         $timeline = $repository->timelineState($user['id']);
-        $evaluation = $this->scoring->evaluate($objects, $isms, $teaching);
-        $report = $this->scoring->auditReport($evaluation, $this->operationalState($objects, $isms, $teaching), $timeline);
+        $evaluation = $this->scoring->evaluate($objects, $isms, $simulation);
+        $report = $this->scoring->auditReport($evaluation, $this->operationalState($objects, $isms, $simulation), $timeline);
         $repository->saveAuditReport($user['id'], $report);
 
         return [
@@ -235,10 +235,10 @@ final class GameStateService
     /**
      * @param list<array<string,mixed>> $objects
      * @param array<string,list<array<string,mixed>>> $isms
-     * @param array<string,mixed> $teaching
+     * @param array<string,mixed> $simulation
      * @return array<string,mixed>
      */
-    private function operationalState(array $objects, array $isms, array $teaching): array
+    private function operationalState(array $objects, array $isms, array $simulation): array
     {
         $confidentialityPosture = $this->controlCoverage($objects, [
             'mfa_enabled',
@@ -273,18 +273,18 @@ final class GameStateService
         ];
         $activeImpacts = [];
 
-        foreach ($teaching['incidents'] ?? [] as $incident) {
-            if (($incident['status'] ?? '') !== 'active') {
+        foreach ($simulation['events'] ?? [] as $event) {
+            if (($event['status'] ?? '') !== 'active') {
                 continue;
             }
 
-            $requiredControls = is_array($incident['required_controls'] ?? null) ? $incident['required_controls'] : [];
-            $requiredEvidence = is_array($incident['required_evidence'] ?? null) ? $incident['required_evidence'] : [];
+            $requiredControls = is_array($event['required_controls'] ?? null) ? $event['required_controls'] : [];
+            $requiredEvidence = is_array($event['required_evidence'] ?? null) ? $event['required_evidence'] : [];
             $controlCoverage = $this->requiredControlCoverage($objects, $requiredControls);
             $evidenceCoverage = $this->requiredEvidenceCoverage($isms['evidence'] ?? [], $requiredEvidence);
             $mitigationPercent = (int) round(($controlCoverage * 0.7) + ($evidenceCoverage * 0.3));
             $impactFactor = max(0.35, 1 - ($mitigationPercent / 100 * 0.65));
-            $impact = $this->incidentImpact((string) $incident['incident_key']);
+            $impact = $this->eventImpact((string) $event['event_key']);
 
             $metrics['clinical_capacity_percent'] -= (int) round($impact['clinical_capacity_loss'] * $impactFactor);
             $metrics['ehr_availability_percent'] -= (int) round($impact['ehr_availability_loss'] * $impactFactor);
@@ -294,12 +294,12 @@ final class GameStateService
             $metrics['closure_risk_percent'] += (int) round($impact['closure_risk'] * $impactFactor);
 
             $activeImpacts[] = [
-                'incident_key' => (string) $incident['incident_key'],
-                'object_key' => (string) $incident['object_key'],
-                'title' => (string) $incident['title'],
-                'severity' => (string) $incident['severity'],
+                'event_key' => (string) $event['event_key'],
+                'object_key' => (string) $event['object_key'],
+                'title' => (string) $event['title'],
+                'severity' => (string) $event['severity'],
                 'mitigation_percent' => $mitigationPercent,
-                'summary' => $this->impactSummary((string) $incident['incident_key'], $mitigationPercent),
+                'summary' => $this->impactSummary((string) $event['event_key'], $mitigationPercent),
             ];
         }
 
@@ -425,7 +425,7 @@ final class GameStateService
     /**
      * @return array<string,int>
      */
-    private function incidentImpact(string $incidentKey): array
+    private function eventImpact(string $eventKey): array
     {
         $defaults = [
             'clinical_capacity_loss' => 10,
@@ -436,7 +436,7 @@ final class GameStateService
             'closure_risk' => 15,
         ];
 
-        return match ($incidentKey) {
+        return match ($eventKey) {
             'phishing_ehr_password' => [
                 'clinical_capacity_loss' => 30,
                 'ehr_availability_loss' => 45,
@@ -465,9 +465,9 @@ final class GameStateService
         };
     }
 
-    private function impactSummary(string $incidentKey, int $mitigationPercent): string
+    private function impactSummary(string $eventKey, int $mitigationPercent): string
     {
-        $impact = match ($incidentKey) {
+        $impact = match ($eventKey) {
             'phishing_ehr_password' => 'EHR access and account trust are under pressure.',
             'lost_nurse_laptop' => 'A lost endpoint creates confidentiality and continuity pressure.',
             'backup_restore_failure' => 'Patient data recovery is impaired until restore evidence is fixed.',

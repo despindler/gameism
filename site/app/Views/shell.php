@@ -135,17 +135,17 @@
                 </section>
             </section>
 
-            <section class="teaching-panel office-operations" aria-label="Office operations">
+            <section class="operations-panel office-operations" aria-label="Office operations">
                 <header class="panel-heading">
                     <div>
                         <h2>Operations</h2>
-                        <p id="teaching-score-summary" class="asset-type"></p>
+                        <p id="simulation-score-summary" class="asset-type"></p>
                     </div>
                 </header>
-                <div class="teaching-grid operations-grid">
+                <div class="event-grid operations-grid">
                     <section>
                         <h3>Simulation Events</h3>
-                        <div id="incident-list" class="teaching-list"></div>
+                        <div id="event-list" class="event-list"></div>
                     </section>
                 </div>
             </section>

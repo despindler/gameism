@@ -44,6 +44,41 @@ The useful internal-audit mechanics should be retained only where they support t
 - The Audit tab can still explain findings and readiness gaps.
 - Backend tables or code dedicated only to a separate internal-audit mode should be removed or merged when the simplification milestone is implemented, unless keeping them temporarily is clearly lower risk.
 
+## Current Implementation Status
+
+Updated: 2026-06-10
+
+The original UI and audit-simplification direction has mostly been implemented.
+
+Completed:
+
+- Top-level navigation is `Office`, `ISMS`, `Audit`.
+- The old Teaching top-level tab is gone.
+- Timeline and Advisor live in a right-side drawer.
+- Office shows derived operational status and active event impact.
+- Timeline events are durable server-side records.
+- The old per-player `incident_events` table has been removed from the current schema.
+- Current event state is exposed through `game_state.simulation.events`.
+- Corrective actions live in `ISMS > Actions`.
+- The old separate internal-audit backend route/table/service has been removed.
+- Audit reports include controls, ISMS artifacts, corrective actions, and operational consequences.
+- Runtime event naming now uses simulation/event terminology rather than teaching/incident-drill terminology.
+
+Partially done:
+
+- Milestone 4 has the durable event-state foundation, but the catalog is still small and needs richer event types and event context.
+- Milestone 5 has bounded offline progression, but event generation is not yet posture-aware and has no UI/admin frequency controls.
+
+Not started:
+
+- Milestone 7 difficulty and guidance controls.
+
+Recommended next milestone after cleanup:
+
+1. Finish Milestone 4 by expanding the event catalog and event context.
+2. Finish Milestone 5 by making offline event generation posture-aware.
+3. Then implement Milestone 7 difficulty and guidance controls.
+
 ## Milestone 1 - Clarify Top-Level Navigation
 
 Goal: Make the main UI sequence match the player roles and reduce conceptual clutter.
@@ -339,4 +374,3 @@ Start with Milestone 1 and Milestone 2 together only if the current UI code make
 Otherwise, do Milestone 1 alone first. It will clarify the mental model without changing the database or simulation rules. Then Milestone 2 can introduce the drawer as the new home for timeline and guidance.
 
 The first simulation-heavy session should be Milestone 3, followed by one deep event in Milestone 4. Prefer one meaningful event with real operational impact over several shallow event labels.
-

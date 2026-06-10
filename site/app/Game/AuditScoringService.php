@@ -9,10 +9,10 @@ final class AuditScoringService
     /**
      * @param list<array<string,mixed>> $objects
      * @param array<string,list<array<string,mixed>>> $isms
-     * @param array<string,mixed> $teaching
+     * @param array<string,mixed> $simulation
      * @return array<string,mixed>
      */
-    public function evaluate(array $objects, array $isms = [], array $teaching = []): array
+    public function evaluate(array $objects, array $isms = [], array $simulation = []): array
     {
         $catalog = GameCatalog::controls();
         $totals = ['security' => 0, 'documentation' => 0, 'resilience' => 0, 'audit' => 0];
@@ -68,7 +68,7 @@ final class AuditScoringService
         }
 
         $artifactScore = $this->evaluateArtifacts($isms, $totals, $earned, $findings);
-        $teachingScore = $this->evaluateTeaching($teaching, $totals, $earned, $findings);
+        $simulationScore = $this->evaluateSimulation($simulation, $totals, $earned, $findings);
 
         $categories = [];
         $totalEarned = 0;
@@ -101,7 +101,7 @@ final class AuditScoringService
                 ],
                 'categories' => $categories,
                 'artifacts' => $artifactScore,
-                'teaching' => $teachingScore,
+                'simulation' => $simulationScore,
             ],
             'findings' => $findings,
             'object_scores' => $objectScores,
@@ -204,36 +204,36 @@ final class AuditScoringService
     }
 
     /**
-     * @param array<string,mixed> $teaching
+     * @param array<string,mixed> $simulation
      * @param array<string,int> $totals
      * @param array<string,int> $earned
      * @param list<array<string,mixed>> $findings
      * @return array<string,mixed>
      */
-    private function evaluateTeaching(array $teaching, array &$totals, array &$earned, array &$findings): array
+    private function evaluateSimulation(array $simulation, array &$totals, array &$earned, array &$findings): array
     {
         $score = [
-            'incidents' => ['earned' => 0, 'total' => 0, 'percent' => 100],
+            'events' => ['earned' => 0, 'total' => 0, 'percent' => 100],
             'corrective_actions' => ['earned' => 0, 'total' => 0, 'percent' => 100],
         ];
 
-        foreach ($teaching['incidents'] ?? [] as $incident) {
-            if ($incident['status'] === 'available') {
+        foreach ($simulation['events'] ?? [] as $event) {
+            if ($event['status'] === 'available') {
                 continue;
             }
 
             $weights = ['resilience' => 2, 'audit' => 1];
-            $points = $incident['status'] === 'resolved' ? 3 : 0;
-            $this->applyArtifactPoints($weights, 3, $points, $totals, $earned, $score['incidents']);
+            $points = $event['status'] === 'resolved' ? 3 : 0;
+            $this->applyArtifactPoints($weights, 3, $points, $totals, $earned, $score['events']);
 
-            if ($incident['status'] === 'active') {
+            if ($event['status'] === 'active') {
                 $findings[] = [
-                    'object_key' => $incident['object_key'],
-                    'object_name' => $incident['title'],
-                    'object_type' => 'incident',
-                    'control_key' => 'incident_' . $incident['incident_key'],
-                    'control_label' => 'Incident response',
-                    'severity' => $incident['severity'] === 'major' ? 'major' : 'minor',
+                    'object_key' => $event['object_key'],
+                    'object_name' => $event['title'],
+                    'object_type' => 'event',
+                    'control_key' => 'event_' . $event['event_key'],
+                    'control_label' => 'Event response',
+                    'severity' => $event['severity'] === 'major' ? 'major' : 'minor',
                     'title' => 'Timeline event is active and unresolved.',
                     'recommendation' => 'Complete and verify the linked corrective action before resolving the event.',
                     'primary_category' => 'resilience',
@@ -241,7 +241,7 @@ final class AuditScoringService
             }
         }
 
-        foreach ($teaching['corrective_actions'] ?? [] as $action) {
+        foreach ($simulation['corrective_actions'] ?? [] as $action) {
             $weights = ['documentation' => 1, 'resilience' => 1, 'audit' => 2];
             $points = $this->statusPoints((string) $action['status'], [
                 'open' => 0,
@@ -258,7 +258,7 @@ final class AuditScoringService
                     'object_type' => 'corrective_action',
                     'control_key' => 'corrective_action_' . $action['action_key'],
                     'control_label' => 'Corrective action',
-                    'severity' => $action['source_type'] === 'incident' ? 'major' : 'minor',
+                    'severity' => $action['source_type'] === 'event' ? 'major' : 'minor',
                     'title' => 'Corrective action is not verified.',
                     'recommendation' => 'Track the action through completion and verify effectiveness.',
                     'primary_category' => 'audit',
@@ -359,7 +359,7 @@ final class AuditScoringService
         $events = is_array($timeline['events'] ?? null) ? $timeline['events'] : [];
 
         foreach ($events as $event) {
-            if (!is_array($event) || ($event['source_type'] ?? '') !== 'incident') {
+            if (!is_array($event) || ($event['source_type'] ?? '') !== 'event') {
                 continue;
             }
 

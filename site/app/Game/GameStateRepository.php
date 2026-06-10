@@ -372,10 +372,10 @@ final class GameStateRepository
     /**
      * @return array<string,mixed>
      */
-    public function teachingState(int $userId): array
+    public function simulationState(int $userId): array
     {
         return [
-            'incidents' => $this->incidentEvents($userId),
+            'events' => $this->eventScenarios($userId),
             'corrective_actions' => $this->correctiveActions($userId),
         ];
     }
@@ -412,13 +412,13 @@ final class GameStateRepository
             return;
         }
 
-        $incidentKey = $this->nextAvailableIncidentKey($userId);
+        $eventKey = $this->nextAvailableEventKey($userId);
 
-        if ($incidentKey === null) {
+        if ($eventKey === null) {
             return;
         }
 
-        $this->startIncident($userId, $incidentKey);
+        $this->startEvent($userId, $eventKey);
     }
 
     /**
@@ -459,24 +459,24 @@ final class GameStateRepository
     /**
      * @return list<array<string,mixed>>
      */
-    public function incidentEvents(int $userId): array
+    public function eventScenarios(int $userId): array
     {
         $eventsBySourceKey = [];
 
         foreach ($this->timelineEvents($userId) as $event) {
-            if ($event['source_type'] === 'incident') {
+            if ($event['source_type'] === 'event') {
                 $eventsBySourceKey[$event['source_key']] = $event;
             }
         }
 
         $items = [];
 
-        foreach (GameCatalog::incidentDrills() as $index => $definition) {
-            $event = $eventsBySourceKey[$definition['incident_key']] ?? null;
+        foreach (GameCatalog::eventScenarios() as $index => $definition) {
+            $event = $eventsBySourceKey[$definition['event_key']] ?? null;
             $status = is_array($event) ? (string) $event['status'] : 'available';
             $items[] = [
                 'id' => is_array($event) ? (int) $event['id'] : $index + 1,
-                'incident_key' => (string) $definition['incident_key'],
+                'event_key' => (string) $definition['event_key'],
                 'object_key' => (string) $definition['object_key'],
                 'title' => (string) $definition['title'],
                 'description' => (string) $definition['description'],
@@ -537,22 +537,22 @@ final class GameStateRepository
         return $items;
     }
 
-    public function startIncident(int $userId, string $incidentKey): void
+    public function startEvent(int $userId, string $eventKey): void
     {
-        $incident = $this->incidentEvent($userId, $incidentKey);
+        $event = $this->eventScenario($userId, $eventKey);
 
-        if ($incident['status'] === 'resolved') {
-            throw new ApiException('INCIDENT_ALREADY_RESOLVED', 409, 'That timeline event has already been resolved.');
+        if ($event['status'] === 'resolved') {
+            throw new ApiException('EVENT_ALREADY_RESOLVED', 409, 'That timeline event has already been resolved.');
         }
 
-        $definition = $this->incidentDefinition($incidentKey);
+        $definition = $this->eventDefinition($eventKey);
         $this->upsertTimelineEvent($userId, [
-            'event_key' => 'incident:' . $incidentKey,
-            'source_type' => 'incident',
-            'source_key' => $incidentKey,
-            'object_key' => $incident['object_key'],
-            'title' => $incident['title'],
-            'body' => $incident['lesson_text'],
+            'event_key' => 'event:' . $eventKey,
+            'source_type' => 'event',
+            'source_key' => $eventKey,
+            'object_key' => $event['object_key'],
+            'title' => $event['title'],
+            'body' => $event['lesson_text'],
             'severity' => $definition['severity'] ?? 'major',
             'status' => 'active',
             'impact' => [
@@ -561,25 +561,25 @@ final class GameStateRepository
             ],
         ]);
         $this->createCorrectiveAction($userId, [
-            'action_key' => 'incident_' . $incidentKey,
-            'source_type' => 'incident',
-            'source_key' => $incidentKey,
-            'object_key' => $incident['object_key'],
-            'title' => $definition['corrective_action_title'] ?? ('Resolve timeline event: ' . $incident['title']),
+            'action_key' => 'event_' . $eventKey,
+            'source_type' => 'event',
+            'source_key' => $eventKey,
+            'object_key' => $event['object_key'],
+            'title' => $definition['corrective_action_title'] ?? ('Resolve timeline event: ' . $event['title']),
             'owner' => $definition['owner'] ?? 'Practice Manager',
             'due_days' => 7,
             'status' => 'open',
             'verification_status' => 'not_checked',
-            'notes' => $incident['lesson_text'],
+            'notes' => $event['lesson_text'],
         ]);
     }
 
-    public function resolveIncident(int $userId, string $incidentKey): void
+    public function resolveEvent(int $userId, string $eventKey): void
     {
-        $incident = $this->incidentEvent($userId, $incidentKey);
+        $event = $this->eventScenario($userId, $eventKey);
 
-        if ($incident['status'] !== 'active') {
-            throw new ApiException('INCIDENT_NOT_ACTIVE', 409, 'Only active timeline events can be resolved.');
+        if ($event['status'] !== 'active') {
+            throw new ApiException('EVENT_NOT_ACTIVE', 409, 'Only active timeline events can be resolved.');
         }
 
         $statement = $this->pdo->prepare(
@@ -590,7 +590,7 @@ final class GameStateRepository
         );
         $statement->execute([
             'user_id' => $userId,
-            'action_key' => 'incident_' . $incidentKey,
+            'action_key' => 'event_' . $eventKey,
         ]);
         $action = $statement->fetch();
 
@@ -598,24 +598,24 @@ final class GameStateRepository
             throw new ApiException('CORRECTIVE_ACTION_NOT_VERIFIED', 409, 'Verify the corrective action as effective before resolving the timeline event.');
         }
 
-        $this->resolveTimelineEvent($userId, 'incident:' . $incidentKey);
+        $this->resolveTimelineEvent($userId, 'event:' . $eventKey);
     }
 
-    private function nextAvailableIncidentKey(int $userId): ?string
+    private function nextAvailableEventKey(int $userId): ?string
     {
         $usedKeys = [];
 
         foreach ($this->timelineEvents($userId) as $event) {
-            if ($event['source_type'] === 'incident') {
+            if ($event['source_type'] === 'event') {
                 $usedKeys[(string) $event['source_key']] = true;
             }
         }
 
-        foreach (GameCatalog::incidentDrills() as $definition) {
-            $incidentKey = (string) $definition['incident_key'];
+        foreach (GameCatalog::eventScenarios() as $definition) {
+            $eventKey = (string) $definition['event_key'];
 
-            if (!isset($usedKeys[$incidentKey])) {
-                return $incidentKey;
+            if (!isset($usedKeys[$eventKey])) {
+                return $eventKey;
             }
         }
 
@@ -779,18 +779,18 @@ final class GameStateRepository
     /**
      * @return array<string,mixed>
      */
-    private function incidentEvent(int $userId, string $incidentKey): array
+    private function eventScenario(int $userId, string $eventKey): array
     {
-        $definition = $this->incidentDefinition($incidentKey);
+        $definition = $this->eventDefinition($eventKey);
 
         if ($definition === []) {
-            throw new ApiException('INCIDENT_NOT_FOUND', 404, 'The selected timeline event does not exist.');
+            throw new ApiException('EVENT_NOT_FOUND', 404, 'The selected timeline event does not exist.');
         }
 
-        $event = $this->timelineEventByKey($userId, 'incident:' . $incidentKey);
+        $event = $this->timelineEventByKey($userId, 'event:' . $eventKey);
 
         return [
-            'incident_key' => (string) $definition['incident_key'],
+            'event_key' => (string) $definition['event_key'],
             'object_key' => (string) $definition['object_key'],
             'title' => (string) $definition['title'],
             'status' => is_array($event) ? (string) $event['status'] : 'available',
@@ -836,10 +836,10 @@ final class GameStateRepository
     /**
      * @return array<string,mixed>
      */
-    private function incidentDefinition(string $incidentKey): array
+    private function eventDefinition(string $eventKey): array
     {
-        foreach (GameCatalog::incidentDrills() as $definition) {
-            if ($definition['incident_key'] === $incidentKey) {
+        foreach (GameCatalog::eventScenarios() as $definition) {
+            if ($definition['event_key'] === $eventKey) {
                 return $definition;
             }
         }
