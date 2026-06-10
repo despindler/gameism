@@ -38,6 +38,7 @@ function resetDatabase(PDO $pdo, string $root): void
     foreach ([
         'internal_audit_reports',
         'corrective_actions',
+        'timeline_events',
         'incident_events',
         'evidence_items',
         'risk_register_items',

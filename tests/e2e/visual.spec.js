@@ -25,7 +25,7 @@ test('authenticated office simulation renders and main workflow works', async ({
   const drawer = page.locator('#info-drawer');
   await expect(drawer).toBeVisible();
   await expect(drawer.getByRole('heading', { name: 'Timeline' })).toBeVisible();
-  await expect(drawer.locator('#timeline-summary')).toContainText('active incidents');
+  await expect(drawer.locator('#timeline-summary')).toContainText('active events');
   await page.keyboard.press('Escape');
   await expect(drawer).toBeHidden();
 
@@ -165,6 +165,28 @@ test('authenticated office simulation renders and main workflow works', async ({
   await expect(page.getByText('Incident drill started.')).toBeVisible();
   await expect(page.getByRole('heading', { name: /Close phishing drill gaps|Prove containment|Make backup recovery/ })).toBeVisible();
   await expect(page.locator('#operations-impacts')).toContainText('Current mitigation');
+  await page.getByRole('button', { name: 'Timeline' }).click();
+  await expect(drawer.locator('#timeline-list')).toContainText(/Phishing attempt|Lost nurse laptop|Backup restore failure/);
+  await drawer.getByRole('button', { name: 'Close timeline drawer' }).click();
+  const eventMarkerPixels = await page.locator('#office-canvas').evaluate((canvas) => {
+    const context = canvas.getContext('2d');
+    const sample = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    let amberPixels = 0;
+
+    for (let index = 0; index < sample.length; index += 4) {
+      const red = sample[index];
+      const green = sample[index + 1];
+      const blue = sample[index + 2];
+      const alpha = sample[index + 3];
+
+      if (alpha > 0 && red > 175 && red < 210 && green > 110 && green < 150 && blue < 60) {
+        amberPixels += 1;
+      }
+    }
+
+    return amberPixels;
+  });
+  expect(eventMarkerPixels).toBeGreaterThan(20);
 
   await page.getByRole('tab', { name: 'Audit' }).click();
   await expect(page.getByRole('heading', { name: 'Audit', exact: true })).toBeVisible();

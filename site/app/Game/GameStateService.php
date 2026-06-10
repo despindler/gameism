@@ -29,6 +29,7 @@ final class GameStateService
         $objects = $repository->objects($user['id']);
         $isms = $repository->ismsArtifacts($user['id']);
         $teaching = $repository->teachingState($user['id']);
+        $timeline = $repository->timelineState($user['id']);
         $evaluation = $this->scoring->evaluate($objects, $isms, $teaching);
 
         return [
@@ -48,6 +49,7 @@ final class GameStateService
             ],
             'isms' => $isms,
             'teaching' => $teaching,
+            'timeline' => $timeline,
             'operations' => $this->operationalState($objects, $isms, $teaching),
             'score' => $evaluation['score'],
             'findings' => $evaluation['findings'],

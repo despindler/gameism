@@ -399,6 +399,55 @@ final class GameStateRepository
     }
 
     /**
+     * @return array<string,mixed>
+     */
+    public function timelineState(int $userId): array
+    {
+        $events = $this->timelineEvents($userId);
+        $activeCount = count(array_filter($events, static fn (array $event): bool => $event['status'] === 'active'));
+
+        return [
+            'events' => $events,
+            'active_count' => $activeCount,
+        ];
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public function timelineEvents(int $userId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, event_key, source_type, source_key, object_key, title, body, severity, status, impact_json, occurred_at, resolved_at, updated_at
+             FROM timeline_events
+             WHERE user_id = :user_id
+             ORDER BY FIELD(status, "active", "resolved"), occurred_at DESC, id DESC'
+        );
+        $statement->execute(['user_id' => $userId]);
+        $items = [];
+
+        foreach ($statement->fetchAll() as $record) {
+            $items[] = [
+                'id' => (int) $record['id'],
+                'event_key' => (string) $record['event_key'],
+                'source_type' => (string) $record['source_type'],
+                'source_key' => (string) $record['source_key'],
+                'object_key' => $record['object_key'] !== null ? (string) $record['object_key'] : null,
+                'title' => (string) $record['title'],
+                'body' => (string) $record['body'],
+                'severity' => (string) $record['severity'],
+                'status' => (string) $record['status'],
+                'impact' => $this->decodeJson((string) $record['impact_json']),
+                'occurred_at' => (string) $record['occurred_at'],
+                'resolved_at' => $record['resolved_at'] !== null ? (string) $record['resolved_at'] : null,
+                'updated_at' => (string) $record['updated_at'],
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
      * @return list<array<string,mixed>>
      */
     public function incidentEvents(int $userId): array
@@ -488,6 +537,20 @@ final class GameStateRepository
         }
 
         $definition = $this->incidentDefinition($incidentKey);
+        $this->upsertTimelineEvent($userId, [
+            'event_key' => 'incident:' . $incidentKey,
+            'source_type' => 'incident',
+            'source_key' => $incidentKey,
+            'object_key' => $incident['object_key'],
+            'title' => $incident['title'],
+            'body' => $incident['lesson_text'],
+            'severity' => $definition['severity'] ?? 'major',
+            'status' => 'active',
+            'impact' => [
+                'required_controls' => $definition['required_controls'] ?? [],
+                'required_evidence' => $definition['required_evidence'] ?? [],
+            ],
+        ]);
         $this->createCorrectiveAction($userId, [
             'action_key' => 'incident_' . $incidentKey,
             'source_type' => 'incident',
@@ -532,6 +595,52 @@ final class GameStateRepository
              WHERE user_id = :user_id AND incident_key = :incident_key'
         );
         $update->execute(['user_id' => $userId, 'incident_key' => $incidentKey]);
+        $this->resolveTimelineEvent($userId, 'incident:' . $incidentKey);
+    }
+
+    /**
+     * @param array<string,mixed> $event
+     */
+    public function upsertTimelineEvent(int $userId, array $event): void
+    {
+        $statement = $this->pdo->prepare(
+            'INSERT INTO timeline_events
+                (user_id, event_key, source_type, source_key, object_key, title, body, severity, status, impact_json, occurred_at, resolved_at)
+             VALUES
+                (:user_id, :event_key, :source_type, :source_key, :object_key, :title, :body, :severity, :status, :impact_json, CURRENT_TIMESTAMP, NULL)
+             ON DUPLICATE KEY UPDATE
+                body = VALUES(body),
+                severity = VALUES(severity),
+                status = VALUES(status),
+                impact_json = VALUES(impact_json),
+                resolved_at = IF(VALUES(status) = "active", NULL, resolved_at),
+                updated_at = CURRENT_TIMESTAMP'
+        );
+        $statement->execute([
+            'user_id' => $userId,
+            'event_key' => $event['event_key'],
+            'source_type' => $event['source_type'],
+            'source_key' => $event['source_key'],
+            'object_key' => $event['object_key'] ?? null,
+            'title' => $event['title'],
+            'body' => $event['body'],
+            'severity' => $event['severity'] ?? 'info',
+            'status' => $event['status'] ?? 'active',
+            'impact_json' => $this->encodeJson(is_array($event['impact'] ?? null) ? $event['impact'] : []),
+        ]);
+    }
+
+    public function resolveTimelineEvent(int $userId, string $eventKey): void
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE timeline_events
+             SET status = "resolved", resolved_at = COALESCE(resolved_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP
+             WHERE user_id = :user_id AND event_key = :event_key'
+        );
+        $statement->execute([
+            'user_id' => $userId,
+            'event_key' => $eventKey,
+        ]);
     }
 
     /**

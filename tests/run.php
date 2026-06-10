@@ -39,6 +39,7 @@ assertTrue(count($initial['isms']['risks']) === 6, 'initial risk register has si
 assertTrue(count($initial['isms']['evidence']) === 8, 'initial evidence checklist has eight items');
 assertTrue(count($initial['teaching']['incidents']) === 3, 'initial scenario has three incident drills');
 assertTrue(count($initial['teaching']['corrective_actions']) === 0, 'initial scenario has no corrective actions');
+assertTrue(count($initial['timeline']['events']) === 0, 'initial timeline has no generated event instances');
 assertTrue($initial['score']['overall']['percent'] < 60, 'initial scenario starts with visible gaps');
 assertTrue($initial['operations']['clinical_capacity_percent'] === 100, 'initial office has full clinical capacity before incidents');
 assertTrue($initial['operations']['ehr_availability_percent'] === 100, 'initial EHR availability is normal before incidents');
@@ -93,6 +94,9 @@ assertTrue($incidentStarted['operations']['data_availability_percent'] < $eviden
 assertTrue($incidentStarted['operations']['patient_delay_minutes'] > $evidenceReady['operations']['patient_delay_minutes'], 'active backup incident creates patient delay');
 assertTrue($incidentStarted['operations']['closure_risk_percent'] > $evidenceReady['operations']['closure_risk_percent'], 'active backup incident increases closure risk');
 assertTrue(count($incidentStarted['operations']['active_impacts']) === 1, 'active incident creates one operational impact');
+assertTrue(count($incidentStarted['timeline']['events']) === 1, 'starting an incident creates a timeline event instance');
+assertTrue($incidentStarted['timeline']['events'][0]['event_key'] === 'incident:backup_restore_failure', 'timeline event uses a stable incident event key');
+assertTrue($incidentStarted['timeline']['events'][0]['status'] === 'active', 'timeline event is active while incident is active');
 
 $unverifiedResolutionRejected = false;
 try {
@@ -117,6 +121,8 @@ assertTrue($resolvedIncident['status'] === 'resolved', 'verified corrective acti
 assertTrue($incidentResolved['operations']['data_availability_percent'] > $incidentStarted['operations']['data_availability_percent'], 'resolving incident restores data availability');
 assertTrue($incidentResolved['operations']['patient_delay_minutes'] < $incidentStarted['operations']['patient_delay_minutes'], 'resolving incident reduces patient delay');
 assertTrue(count($incidentResolved['operations']['active_impacts']) === 0, 'resolved incident clears active operational impacts');
+assertTrue($incidentResolved['timeline']['events'][0]['status'] === 'resolved', 'resolving incident resolves timeline event');
+assertTrue($incidentResolved['timeline']['events'][0]['resolved_at'] !== null, 'resolved timeline event records resolution time');
 
 $invalidActionStatusRejected = false;
 try {
@@ -148,7 +154,7 @@ echo "OK: smoke tests passed.\n";
 function resetDatabase(PDO $pdo, string $root): void
 {
     $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
-    foreach (['internal_audit_reports', 'corrective_actions', 'incident_events', 'evidence_items', 'risk_register_items', 'asset_inventory_items', 'audit_reports', 'office_objects', 'player_states', 'app_settings', 'users'] as $table) {
+    foreach (['internal_audit_reports', 'corrective_actions', 'timeline_events', 'incident_events', 'evidence_items', 'risk_register_items', 'asset_inventory_items', 'audit_reports', 'office_objects', 'player_states', 'app_settings', 'users'] as $table) {
         $pdo->exec('DROP TABLE IF EXISTS ' . $table);
     }
     $pdo->exec('SET FOREIGN_KEY_CHECKS=1');

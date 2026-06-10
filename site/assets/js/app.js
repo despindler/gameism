@@ -310,9 +310,9 @@
 
     function renderTimeline() {
         const items = timelineItems();
-        const activeCount = state.game.teaching.incidents.filter((incident) => incident.status === 'active').length;
+        const activeCount = state.game.timeline.active_count;
         const openActionCount = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
-        els.timelineSummary.textContent = `${activeCount} active incidents - ${openActionCount} open corrective actions`;
+        els.timelineSummary.textContent = `${activeCount} active events - ${openActionCount} open corrective actions`;
 
         els.timelineList.innerHTML = items.map((item) => `
             <article class="timeline-card ${escapeAttr(item.tone)}">
@@ -324,10 +324,10 @@
     }
 
     function renderDrawerBadge() {
-        const activeIncidents = state.game.teaching.incidents.filter((incident) => incident.status === 'active').length;
+        const activeEvents = state.game.timeline.active_count;
         const openActions = state.game.teaching.corrective_actions.filter(isCorrectiveActionOpen).length;
         const priorityGuidance = guidanceItems().filter((item) => item.tone === 'critical' || item.tone === 'warning').length;
-        const badgeCount = activeIncidents + openActions + priorityGuidance;
+        const badgeCount = activeEvents + openActions + priorityGuidance;
 
         els.drawerBadge.hidden = badgeCount === 0;
         els.drawerBadge.textContent = String(Math.min(badgeCount, 9));
@@ -344,16 +344,12 @@
             body: `${operations.patient_delay_minutes} minutes expected patient delay, ${operations.closure_risk_percent}% closure risk.`,
         });
 
-        for (const incident of state.game.teaching.incidents) {
-            const statusText = incident.status === 'available'
-                ? incident.trigger_text
-                : incident.lesson_text;
-
+        for (const event of state.game.timeline.events) {
             items.push({
-                tone: incident.status,
-                meta: `Incident - ${incident.status}`,
-                title: incident.title,
-                body: statusText,
+                tone: event.status,
+                meta: `${typeLabel(event.source_type)} - ${event.status}`,
+                title: event.title,
+                body: event.body,
             });
         }
 
@@ -580,6 +576,8 @@
         for (const object of map.objects) {
             drawObject(object, offsetX, offsetY, unit);
         }
+
+        drawTimelineEventMarkers(offsetX, offsetY, unit);
     }
 
     function drawFloorPlan(offsetX, offsetY, unit, mapWidth, mapHeight) {
@@ -759,6 +757,42 @@
         }
 
         return overlayMetric('', 'neutral');
+    }
+
+    function drawTimelineEventMarkers(offsetX, offsetY, unit) {
+        const activeEvents = state.game.timeline.events.filter((event) => event.status === 'active' && event.object_key);
+
+        if (activeEvents.length === 0) {
+            return;
+        }
+
+        ctx.save();
+        for (const event of activeEvents) {
+            const object = state.game.map.objects.find((item) => item.object_key === event.object_key);
+
+            if (!object) {
+                continue;
+            }
+
+            const x = offsetX + (object.x + object.width) * unit - Math.max(10, unit * 0.3);
+            const y = offsetY + object.y * unit + Math.max(10, unit * 0.3);
+            const radius = Math.max(9, Math.min(16, unit * 0.42));
+
+            ctx.beginPath();
+            ctx.fillStyle = '#c28622';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `900 ${Math.max(11, Math.min(16, radius * 1.25))}px system-ui, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('!', x, y + 0.5);
+        }
+        ctx.restore();
     }
 
     function overlayMetric(label, tone) {

@@ -429,3 +429,41 @@ Next steps:
 - Replace incident drills with timeline event instances.
 - Add floor-plan operational overlays or impacted-asset markers once event instances exist.
 - Feed operational consequences into the Audit report.
+
+## Milestone 5 - Durable Timeline Event Instances
+
+Date: 2026-06-10
+
+Goal: Stop treating the Timeline drawer as a purely frontend-derived list and add durable server-created event instances.
+
+What changed:
+
+- Added a `timeline_events` table to `database/schema.sql`.
+- Added repository support for persisted timeline events and top-level `game_state.timeline`.
+- Starting an incident now creates or reactivates a stable timeline event instance.
+- Resolving an incident now marks the corresponding timeline event as resolved and records `resolved_at`.
+- Updated the Timeline drawer to render `game_state.timeline.events` instead of deriving incident rows directly.
+- Added impacted-asset event markers on the floor plan for active timeline events.
+- Updated PHP smoke tests to verify event creation, stable event keys, active status, resolution status, and resolution timestamps.
+- Updated Playwright coverage to verify the Timeline drawer lists a started event and the canvas shows an event marker.
+- Updated README to describe durable Timeline events.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- The existing `incident_events` table remains the per-user incident catalog/state table for now.
+- Timeline event generation is still manually triggered through incident drills; random/offline progression is a later milestone.
+- Corrective actions are still rendered as follow-up feed items but are not separate `timeline_events` rows yet.
+
+Next steps:
+
+- Add offline timeline progression and bounded event generation.
+- Feed operational consequences into the simulated Audit report.
+- Consider renaming or reshaping `incident_events` once the event catalog matures.
