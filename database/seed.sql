@@ -11,7 +11,9 @@ VALUES
     ('game.isms.risk_treated_weight', '5', 'integer'),
     ('game.isms.evidence_ready_weight', '5', 'integer'),
     ('game.teaching.max_internal_audit_actions', '3', 'integer'),
-    ('game.teaching.corrective_action_due_days', '14', 'integer')
+    ('game.teaching.corrective_action_due_days', '14', 'integer'),
+    ('game.timeline.offline_event_minutes', '120', 'integer'),
+    ('game.timeline.max_events_per_advance', '1', 'integer')
 ON DUPLICATE KEY UPDATE
     setting_value = VALUES(setting_value),
     value_type = VALUES(value_type),

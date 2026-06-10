@@ -26,6 +26,7 @@ final class GameStateService
     {
         $repository = $this->repository();
         $repository->ensureInitialized($user['id']);
+        $repository->advanceTimeline($user['id']);
         $objects = $repository->objects($user['id']);
         $isms = $repository->ismsArtifacts($user['id']);
         $teaching = $repository->teachingState($user['id']);

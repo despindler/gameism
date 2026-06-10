@@ -149,12 +149,27 @@ $audit = $game->runAudit($user);
 assertTrue(isset($audit['report']['status']), 'audit report includes a status');
 assertTrue(isset($audit['game_state']['latest_audit']), 'latest audit is persisted');
 
+$timelineUser = $auth->register('timeline_user', 'strongpass123', 'Timeline User');
+$timelineInitial = $game->stateForUser($timelineUser);
+assertTrue(count($timelineInitial['timeline']['events']) === 0, 'offline timeline user starts without event instances');
+$pdo->exec('UPDATE timeline_states SET last_advanced_at = UTC_TIMESTAMP() - INTERVAL 3 HOUR WHERE user_id = ' . (int) $timelineUser['id']);
+$timelineAdvanced = $game->stateForUser($timelineUser);
+assertTrue($timelineAdvanced['timeline']['active_count'] === 1, 'offline progression creates one active timeline event');
+assertTrue(count($timelineAdvanced['timeline']['events']) === 1, 'offline progression is bounded to one event');
+assertTrue($timelineAdvanced['teaching']['incidents'][0]['status'] === 'active', 'offline progression activates the next available incident');
+assertTrue(count($timelineAdvanced['teaching']['corrective_actions']) === 1, 'offline progression creates a corrective action for the event');
+$timelineRepeated = $game->stateForUser($timelineUser);
+assertTrue(count($timelineRepeated['timeline']['events']) === 1, 'repeated game-state reads do not duplicate offline events');
+$pdo->exec('UPDATE timeline_states SET last_advanced_at = UTC_TIMESTAMP() - INTERVAL 3 HOUR WHERE user_id = ' . (int) $timelineUser['id']);
+$timelineStillBounded = $game->stateForUser($timelineUser);
+assertTrue(count($timelineStillBounded['timeline']['events']) === 1, 'active timeline event blocks further offline generation');
+
 echo "OK: smoke tests passed.\n";
 
 function resetDatabase(PDO $pdo, string $root): void
 {
     $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
-    foreach (['internal_audit_reports', 'corrective_actions', 'timeline_events', 'incident_events', 'evidence_items', 'risk_register_items', 'asset_inventory_items', 'audit_reports', 'office_objects', 'player_states', 'app_settings', 'users'] as $table) {
+    foreach (['internal_audit_reports', 'corrective_actions', 'timeline_states', 'timeline_events', 'incident_events', 'evidence_items', 'risk_register_items', 'asset_inventory_items', 'audit_reports', 'office_objects', 'player_states', 'app_settings', 'users'] as $table) {
         $pdo->exec('DROP TABLE IF EXISTS ' . $table);
     }
     $pdo->exec('SET FOREIGN_KEY_CHECKS=1');

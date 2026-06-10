@@ -149,6 +149,11 @@ final class GameStateRepository
                 ]);
             }
 
+            $timelineState = $this->pdo->prepare(
+                'INSERT IGNORE INTO timeline_states (user_id, last_advanced_at) VALUES (:user_id, CURRENT_TIMESTAMP)'
+            );
+            $timelineState->execute(['user_id' => $userId]);
+
             $this->pdo->commit();
         } catch (\Throwable $exception) {
             $this->pdo->rollBack();
@@ -405,11 +410,38 @@ final class GameStateRepository
     {
         $events = $this->timelineEvents($userId);
         $activeCount = count(array_filter($events, static fn (array $event): bool => $event['status'] === 'active'));
+        $lastAdvancedAt = $this->timelineLastAdvancedAt($userId);
 
         return [
             'events' => $events,
             'active_count' => $activeCount,
+            'last_advanced_at' => $lastAdvancedAt,
         ];
+    }
+
+    public function advanceTimeline(int $userId): void
+    {
+        $intervalMinutes = $this->settingInt('game.timeline.offline_event_minutes', 120);
+        $maxEvents = $this->settingInt('game.timeline.max_events_per_advance', 1);
+        $lastAdvancedAt = $this->timelineLastAdvancedAt($userId);
+
+        if ($maxEvents < 1 || !$this->timelineIsDue($lastAdvancedAt, $intervalMinutes)) {
+            return;
+        }
+
+        $this->touchTimelineState($userId);
+
+        if ($this->activeTimelineEventCount($userId) > 0) {
+            return;
+        }
+
+        $incident = $this->nextAvailableIncident($userId);
+
+        if ($incident === null) {
+            return;
+        }
+
+        $this->startIncident($userId, $incident['incident_key']);
     }
 
     /**
@@ -596,6 +628,89 @@ final class GameStateRepository
         );
         $update->execute(['user_id' => $userId, 'incident_key' => $incidentKey]);
         $this->resolveTimelineEvent($userId, 'incident:' . $incidentKey);
+    }
+
+    /**
+     * @return array{incident_key:string}|null
+     */
+    private function nextAvailableIncident(int $userId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT incident_key
+             FROM incident_events
+             WHERE user_id = :user_id AND status = "available"
+             ORDER BY id ASC
+             LIMIT 1'
+        );
+        $statement->execute(['user_id' => $userId]);
+        $record = $statement->fetch();
+
+        if (!is_array($record)) {
+            return null;
+        }
+
+        return [
+            'incident_key' => (string) $record['incident_key'],
+        ];
+    }
+
+    private function activeTimelineEventCount(int $userId): int
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM timeline_events WHERE user_id = :user_id AND status = "active"'
+        );
+        $statement->execute(['user_id' => $userId]);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    private function timelineLastAdvancedAt(int $userId): string
+    {
+        $statement = $this->pdo->prepare('SELECT last_advanced_at FROM timeline_states WHERE user_id = :user_id LIMIT 1');
+        $statement->execute(['user_id' => $userId]);
+        $value = $statement->fetchColumn();
+
+        if (!is_string($value) || trim($value) === '') {
+            $this->touchTimelineState($userId);
+            return gmdate('Y-m-d H:i:s');
+        }
+
+        return $value;
+    }
+
+    private function timelineIsDue(string $lastAdvancedAt, int $intervalMinutes): bool
+    {
+        $intervalMinutes = max(1, $intervalMinutes);
+        $lastTimestamp = strtotime($lastAdvancedAt . ' UTC');
+
+        if ($lastTimestamp === false) {
+            return true;
+        }
+
+        return time() - $lastTimestamp >= $intervalMinutes * 60;
+    }
+
+    private function touchTimelineState(int $userId): void
+    {
+        $statement = $this->pdo->prepare(
+            'INSERT INTO timeline_states (user_id, last_advanced_at)
+             VALUES (:user_id, CURRENT_TIMESTAMP)
+             ON DUPLICATE KEY UPDATE last_advanced_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP'
+        );
+        $statement->execute(['user_id' => $userId]);
+    }
+
+    private function settingInt(string $key, int $default): int
+    {
+        $statement = $this->pdo->prepare('SELECT setting_value FROM app_settings WHERE setting_key = :setting_key LIMIT 1');
+        $statement->execute(['setting_key' => $key]);
+        $value = $statement->fetchColumn();
+
+        if (!is_scalar($value) || !is_numeric($value)) {
+            return $default;
+        }
+
+        return (int) $value;
     }
 
     /**

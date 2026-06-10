@@ -38,6 +38,7 @@ After login, the player configures a small physician office from the floor plan 
 - Risk register items track likelihood, impact, owner, and treatment status.
 - Evidence items track whether audit evidence is missing, draft, ready, or reviewed.
 - Incident drills create durable timeline events and linked corrective actions.
+- Offline timeline progression can activate a bounded number of events when the player returns after enough elapsed time.
 - Corrective actions must be completed and verified before related drills can be resolved.
 - Readiness scores combine controls and ISMS artifacts across security, documentation, resilience, and audit categories.
 - The simulated audit report samples missing controls, untreated risks, unverified assets, and incomplete evidence.

@@ -467,3 +467,42 @@ Next steps:
 - Add offline timeline progression and bounded event generation.
 - Feed operational consequences into the simulated Audit report.
 - Consider renaming or reshaping `incident_events` once the event catalog matures.
+
+## Milestone 6 - Offline Timeline Progression
+
+Date: 2026-06-10
+
+Goal: Make the simulation timeline advance when the player returns after enough elapsed time, while keeping generation bounded and deterministic.
+
+What changed:
+
+- Added a `timeline_states` table with per-player `last_advanced_at`.
+- Added seed settings for `game.timeline.offline_event_minutes` and `game.timeline.max_events_per_advance`.
+- Initialized timeline state for each player during game-state setup.
+- Added server-side timeline advancement during `stateForUser`.
+- When the timeline is due and no event is currently active, the next available incident is activated automatically.
+- Offline advancement creates the same durable timeline event and corrective action as a manually started incident.
+- Repeated game-state reads update the timeline clock without duplicating events.
+- Active timeline events block additional offline event generation.
+- Updated reset helpers and smoke tests for the new timeline state table and bounded offline behavior.
+- Updated README to mention offline progression.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- Offline generation currently uses the incident catalog in deterministic row order.
+- Only one event is generated per advancement cycle.
+- There is no UI control yet for event frequency or difficulty.
+
+Next steps:
+
+- Feed operational consequences into the simulated Audit report.
+- Add UI/admin controls for timeline frequency and guidance difficulty.
+- Eventually replace incident drills with a fuller event catalog and role-aware generation.
