@@ -41,6 +41,9 @@ test('authenticated office simulation renders and main workflow works', async ({
   await expect(guidanceDialog).toBeHidden();
   await expect(page.locator('#office-canvas')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'ISMS Workbench' })).toBeHidden();
+  await expect(page.getByRole('heading', { name: /Nominal|Watch|Disrupted|Closure risk/ })).toBeVisible();
+  await expect(page.locator('#operations-metrics')).toContainText('Clinical capacity');
+  await expect(page.locator('#operations-metrics')).toContainText('EHR availability');
   await expect(page.getByRole('heading', { name: 'Operations' })).toBeVisible();
 
   const canvasBox = await page.locator('#office-canvas').boundingBox();
@@ -161,6 +164,7 @@ test('authenticated office simulation renders and main workflow works', async ({
   await page.getByRole('button', { name: 'Start drill' }).first().click();
   await expect(page.getByText('Incident drill started.')).toBeVisible();
   await expect(page.getByRole('heading', { name: /Close phishing drill gaps|Prove containment|Make backup recovery/ })).toBeVisible();
+  await expect(page.locator('#operations-impacts')).toContainText('Current mitigation');
 
   await page.getByRole('tab', { name: 'Audit' }).click();
   await expect(page.getByRole('heading', { name: 'Audit', exact: true })).toBeVisible();

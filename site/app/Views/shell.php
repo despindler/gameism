@@ -99,6 +99,18 @@
         </nav>
 
         <section id="panel-office" class="tab-panel active" role="tabpanel" aria-labelledby="tab-office" data-tab-panel="office">
+            <section class="operations-status-panel" aria-label="Office function status">
+                <header>
+                    <div>
+                        <p class="eyebrow">Office Function</p>
+                        <h2 id="operations-status-title">Operational Status</h2>
+                    </div>
+                    <span id="operations-status-badge" class="status-badge ready">Nominal</span>
+                </header>
+                <div id="operations-metrics" class="operations-metrics"></div>
+                <div id="operations-impacts" class="operations-impacts"></div>
+            </section>
+
             <section class="workspace">
                 <section class="scene-panel" aria-label="Office floor plan">
                     <div class="map-view-toolbar">

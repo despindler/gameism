@@ -390,3 +390,42 @@ Next steps:
 - Introduce operational state metrics for whether the office can function during incidents.
 - Replace manual incident drills with timeline event instances.
 - Add difficulty and guidance-visibility controls after the core event loop is stronger.
+
+## Milestone 4 - Derived Operational State
+
+Date: 2026-06-10
+
+Goal: Make the Office view show whether the practice can function operationally, not only whether its controls and documentation score well.
+
+What changed:
+
+- Added a derived `operations` block to `game_state`.
+- Added operational metrics for clinical capacity, EHR availability, data availability, patient delay, confidentiality exposure, closure risk, resilience posture, and documentation posture.
+- Derived baseline exposure and closure risk from implemented controls and ISMS artifact readiness.
+- Derived active incident impact from existing incident drill status, required controls, and required evidence.
+- Added active impact summaries for the Timeline feed and Office status panel.
+- Added an Office `Office Function` status panel above the floor plan.
+- Added the operational status as the first Timeline feed item.
+- Updated PHP smoke tests to verify baseline operations, hardening improvements, active incident degradation, and recovery after resolution.
+- Updated Playwright coverage to verify operational metrics and active impact rendering.
+- Updated README to include the operational function panel.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- Operational metrics are derived, not persisted.
+- Incident impact still uses the existing manual drill model; durable timeline event instances are planned next.
+- The metric formulas are intentionally simple and explainable for the prototype.
+
+Next steps:
+
+- Replace incident drills with timeline event instances.
+- Add floor-plan operational overlays or impacted-asset markers once event instances exist.
+- Feed operational consequences into the Audit report.

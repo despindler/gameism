@@ -48,6 +48,7 @@ final class GameStateService
             ],
             'isms' => $isms,
             'teaching' => $teaching,
+            'operations' => $this->operationalState($objects, $isms, $teaching),
             'score' => $evaluation['score'],
             'findings' => $evaluation['findings'],
             'latest_audit' => $repository->latestAuditReport($user['id']),
@@ -268,6 +269,271 @@ final class GameStateService
     private function repository(): GameStateRepository
     {
         return new GameStateRepository($this->connections->pdo());
+    }
+
+    /**
+     * @param list<array<string,mixed>> $objects
+     * @param array<string,list<array<string,mixed>>> $isms
+     * @param array<string,mixed> $teaching
+     * @return array<string,mixed>
+     */
+    private function operationalState(array $objects, array $isms, array $teaching): array
+    {
+        $confidentialityPosture = $this->controlCoverage($objects, [
+            'mfa_enabled',
+            'disk_encryption',
+            'screen_lock',
+            'least_privilege',
+            'guest_network_isolated',
+            'physical_lock',
+            'secure_print',
+            'disposal_procedure',
+        ]);
+        $resiliencePosture = $this->controlCoverage($objects, [
+            'backup_export_plan',
+            'backup_schedule',
+            'encrypted_backup',
+            'restore_test',
+            'offline_or_immutable_copy',
+            'incident_procedure',
+            'risk_register',
+        ]);
+        $documentationPosture = $this->artifactCoverage($isms);
+
+        $metrics = [
+            'clinical_capacity_percent' => 100,
+            'ehr_availability_percent' => 100,
+            'data_availability_percent' => 100,
+            'patient_delay_minutes' => 0,
+            'confidentiality_exposure_percent' => max(0, 100 - $confidentialityPosture),
+            'closure_risk_percent' => max(0, (int) round((100 - $resiliencePosture) * 0.35)),
+            'resilience_posture_percent' => $resiliencePosture,
+            'documentation_posture_percent' => $documentationPosture,
+        ];
+        $activeImpacts = [];
+
+        foreach ($teaching['incidents'] ?? [] as $incident) {
+            if (($incident['status'] ?? '') !== 'active') {
+                continue;
+            }
+
+            $requiredControls = is_array($incident['required_controls'] ?? null) ? $incident['required_controls'] : [];
+            $requiredEvidence = is_array($incident['required_evidence'] ?? null) ? $incident['required_evidence'] : [];
+            $controlCoverage = $this->requiredControlCoverage($objects, $requiredControls);
+            $evidenceCoverage = $this->requiredEvidenceCoverage($isms['evidence'] ?? [], $requiredEvidence);
+            $mitigationPercent = (int) round(($controlCoverage * 0.7) + ($evidenceCoverage * 0.3));
+            $impactFactor = max(0.35, 1 - ($mitigationPercent / 100 * 0.65));
+            $impact = $this->incidentImpact((string) $incident['incident_key']);
+
+            $metrics['clinical_capacity_percent'] -= (int) round($impact['clinical_capacity_loss'] * $impactFactor);
+            $metrics['ehr_availability_percent'] -= (int) round($impact['ehr_availability_loss'] * $impactFactor);
+            $metrics['data_availability_percent'] -= (int) round($impact['data_availability_loss'] * $impactFactor);
+            $metrics['patient_delay_minutes'] += (int) round($impact['patient_delay_minutes'] * $impactFactor);
+            $metrics['confidentiality_exposure_percent'] += (int) round($impact['confidentiality_exposure'] * $impactFactor);
+            $metrics['closure_risk_percent'] += (int) round($impact['closure_risk'] * $impactFactor);
+
+            $activeImpacts[] = [
+                'incident_key' => (string) $incident['incident_key'],
+                'object_key' => (string) $incident['object_key'],
+                'title' => (string) $incident['title'],
+                'severity' => (string) $incident['severity'],
+                'mitigation_percent' => $mitigationPercent,
+                'summary' => $this->impactSummary((string) $incident['incident_key'], $mitigationPercent),
+            ];
+        }
+
+        foreach (['clinical_capacity_percent', 'ehr_availability_percent', 'data_availability_percent'] as $key) {
+            $metrics[$key] = max(0, min(100, $metrics[$key]));
+        }
+
+        foreach (['confidentiality_exposure_percent', 'closure_risk_percent'] as $key) {
+            $metrics[$key] = max(0, min(100, $metrics[$key]));
+        }
+
+        return [
+            ...$metrics,
+            'status' => $this->operationalStatus($metrics),
+            'active_impacts' => $activeImpacts,
+        ];
+    }
+
+    /**
+     * @param list<array<string,mixed>> $objects
+     * @param list<string> $controlKeys
+     */
+    private function controlCoverage(array $objects, array $controlKeys): int
+    {
+        $total = 0;
+        $enabled = 0;
+
+        foreach ($controlKeys as $controlKey) {
+            foreach ($objects as $object) {
+                $allowed = $object['metadata']['controls'] ?? [];
+
+                if (!is_array($allowed) || !in_array($controlKey, $allowed, true)) {
+                    continue;
+                }
+
+                $total++;
+
+                if ((bool) ($object['config'][$controlKey] ?? false)) {
+                    $enabled++;
+                }
+            }
+        }
+
+        return $total > 0 ? (int) round(($enabled / $total) * 100) : 100;
+    }
+
+    /**
+     * @param array<string,list<array<string,mixed>>> $isms
+     */
+    private function artifactCoverage(array $isms): int
+    {
+        $total = 0;
+        $ready = 0;
+
+        foreach ($isms['assets'] ?? [] as $asset) {
+            $total++;
+            $ready += (string) $asset['status'] === 'verified' ? 1 : 0;
+        }
+
+        foreach ($isms['risks'] ?? [] as $risk) {
+            $total++;
+            $ready += in_array((string) $risk['treatment_status'], ['treated', 'accepted'], true) ? 1 : 0;
+        }
+
+        foreach ($isms['evidence'] ?? [] as $evidence) {
+            $total++;
+            $ready += in_array((string) $evidence['status'], ['ready', 'reviewed'], true) ? 1 : 0;
+        }
+
+        return $total > 0 ? (int) round(($ready / $total) * 100) : 100;
+    }
+
+    /**
+     * @param list<array<string,mixed>> $objects
+     * @param list<string> $controlKeys
+     */
+    private function requiredControlCoverage(array $objects, array $controlKeys): int
+    {
+        if ($controlKeys === []) {
+            return 100;
+        }
+
+        $enabled = 0;
+
+        foreach ($controlKeys as $controlKey) {
+            foreach ($objects as $object) {
+                $allowed = $object['metadata']['controls'] ?? [];
+
+                if (is_array($allowed) && in_array($controlKey, $allowed, true) && (bool) ($object['config'][$controlKey] ?? false)) {
+                    $enabled++;
+                    break;
+                }
+            }
+        }
+
+        return (int) round(($enabled / count($controlKeys)) * 100);
+    }
+
+    /**
+     * @param list<array<string,mixed>> $evidenceItems
+     * @param list<string> $evidenceKeys
+     */
+    private function requiredEvidenceCoverage(array $evidenceItems, array $evidenceKeys): int
+    {
+        if ($evidenceKeys === []) {
+            return 100;
+        }
+
+        $ready = 0;
+
+        foreach ($evidenceKeys as $evidenceKey) {
+            foreach ($evidenceItems as $evidence) {
+                if ((string) $evidence['evidence_key'] === $evidenceKey && in_array((string) $evidence['status'], ['ready', 'reviewed'], true)) {
+                    $ready++;
+                    break;
+                }
+            }
+        }
+
+        return (int) round(($ready / count($evidenceKeys)) * 100);
+    }
+
+    /**
+     * @return array<string,int>
+     */
+    private function incidentImpact(string $incidentKey): array
+    {
+        $defaults = [
+            'clinical_capacity_loss' => 10,
+            'ehr_availability_loss' => 10,
+            'data_availability_loss' => 10,
+            'patient_delay_minutes' => 30,
+            'confidentiality_exposure' => 20,
+            'closure_risk' => 15,
+        ];
+
+        return match ($incidentKey) {
+            'phishing_ehr_password' => [
+                'clinical_capacity_loss' => 30,
+                'ehr_availability_loss' => 45,
+                'data_availability_loss' => 15,
+                'patient_delay_minutes' => 90,
+                'confidentiality_exposure' => 55,
+                'closure_risk' => 25,
+            ],
+            'lost_nurse_laptop' => [
+                'clinical_capacity_loss' => 15,
+                'ehr_availability_loss' => 5,
+                'data_availability_loss' => 10,
+                'patient_delay_minutes' => 45,
+                'confidentiality_exposure' => 65,
+                'closure_risk' => 18,
+            ],
+            'backup_restore_failure' => [
+                'clinical_capacity_loss' => 45,
+                'ehr_availability_loss' => 20,
+                'data_availability_loss' => 70,
+                'patient_delay_minutes' => 180,
+                'confidentiality_exposure' => 15,
+                'closure_risk' => 65,
+            ],
+            default => $defaults,
+        };
+    }
+
+    private function impactSummary(string $incidentKey, int $mitigationPercent): string
+    {
+        $impact = match ($incidentKey) {
+            'phishing_ehr_password' => 'EHR access and account trust are under pressure.',
+            'lost_nurse_laptop' => 'A lost endpoint creates confidentiality and continuity pressure.',
+            'backup_restore_failure' => 'Patient data recovery is impaired until restore evidence is fixed.',
+            default => 'The office is operating under degraded conditions.',
+        };
+
+        return $impact . ' Current mitigation is ' . $mitigationPercent . '%.';
+    }
+
+    /**
+     * @param array<string,int> $metrics
+     */
+    private function operationalStatus(array $metrics): string
+    {
+        if ($metrics['closure_risk_percent'] >= 70 || $metrics['clinical_capacity_percent'] < 45 || $metrics['data_availability_percent'] < 40) {
+            return 'closure_risk';
+        }
+
+        if ($metrics['clinical_capacity_percent'] < 75 || $metrics['ehr_availability_percent'] < 75 || $metrics['data_availability_percent'] < 75) {
+            return 'disrupted';
+        }
+
+        if ($metrics['confidentiality_exposure_percent'] >= 55 || $metrics['closure_risk_percent'] >= 35) {
+            return 'watch';
+        }
+
+        return 'nominal';
     }
 
     /**

@@ -29,6 +29,7 @@ After login, the player configures a small physician office from the floor plan 
 - A right-side Timeline drawer shows simulation activity and an Advisor tab with state-driven guidance hints.
 - An audit-prep stepper shows where the player is in the review workflow.
 - The Office tab shows a schematic physician-office floor plan with rooms, an aisle, doors, furniture, and type-specific device drawings.
+- The Office tab shows current operational function: clinical capacity, EHR availability, data availability, patient delay, exposure, and closure risk.
 - Floor-plan view modes overlay readiness, evidence, risk, and audit status directly on each clickable asset.
 - Floor-plan assets open a device profile modal with linked controls, risks, evidence, findings, and corrective actions.
 - Device configuration happens inside the modal instead of a permanent side panel.

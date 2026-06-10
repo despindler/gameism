@@ -40,8 +40,20 @@ assertTrue(count($initial['isms']['evidence']) === 8, 'initial evidence checklis
 assertTrue(count($initial['teaching']['incidents']) === 3, 'initial scenario has three incident drills');
 assertTrue(count($initial['teaching']['corrective_actions']) === 0, 'initial scenario has no corrective actions');
 assertTrue($initial['score']['overall']['percent'] < 60, 'initial scenario starts with visible gaps');
+assertTrue($initial['operations']['clinical_capacity_percent'] === 100, 'initial office has full clinical capacity before incidents');
+assertTrue($initial['operations']['ehr_availability_percent'] === 100, 'initial EHR availability is normal before incidents');
+assertTrue($initial['operations']['confidentiality_exposure_percent'] > 0, 'missing security controls create operational exposure');
 
 $before = $initial['score']['overall']['percent'];
+$initialExposure = $initial['operations']['confidentiality_exposure_percent'];
+$securedLaptop = $game->configureObject($user, 'nurse_laptop', [
+    'mfa_enabled' => true,
+    'disk_encryption' => true,
+    'patching_current' => true,
+    'least_privilege' => true,
+]);
+assertTrue($securedLaptop['operations']['confidentiality_exposure_percent'] < $initialExposure, 'hardening an endpoint reduces operational exposure');
+
 $updated = $game->configureObject($user, 'isms_binder', [
     'asset_inventory' => true,
     'risk_register' => true,
@@ -77,6 +89,10 @@ assertTrue($invalidStatusRejected, 'invalid evidence status is rejected with a s
 $incidentStarted = $game->startIncident($user, 'backup_restore_failure');
 assertTrue($incidentStarted['teaching']['incidents'][0]['status'] === 'active', 'starting an incident marks it active');
 assertTrue(count($incidentStarted['teaching']['corrective_actions']) === 1, 'starting an incident creates a corrective action');
+assertTrue($incidentStarted['operations']['data_availability_percent'] < $evidenceReady['operations']['data_availability_percent'], 'active backup incident reduces data availability');
+assertTrue($incidentStarted['operations']['patient_delay_minutes'] > $evidenceReady['operations']['patient_delay_minutes'], 'active backup incident creates patient delay');
+assertTrue($incidentStarted['operations']['closure_risk_percent'] > $evidenceReady['operations']['closure_risk_percent'], 'active backup incident increases closure risk');
+assertTrue(count($incidentStarted['operations']['active_impacts']) === 1, 'active incident creates one operational impact');
 
 $unverifiedResolutionRejected = false;
 try {
@@ -98,6 +114,9 @@ $resolvedIncident = array_values(array_filter(
     static fn (array $incident): bool => $incident['incident_key'] === 'backup_restore_failure'
 ))[0];
 assertTrue($resolvedIncident['status'] === 'resolved', 'verified corrective action allows incident resolution');
+assertTrue($incidentResolved['operations']['data_availability_percent'] > $incidentStarted['operations']['data_availability_percent'], 'resolving incident restores data availability');
+assertTrue($incidentResolved['operations']['patient_delay_minutes'] < $incidentStarted['operations']['patient_delay_minutes'], 'resolving incident reduces patient delay');
+assertTrue(count($incidentResolved['operations']['active_impacts']) === 0, 'resolved incident clears active operational impacts');
 
 $invalidActionStatusRejected = false;
 try {

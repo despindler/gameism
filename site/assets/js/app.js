@@ -57,6 +57,10 @@
         tabPanels: document.querySelectorAll('[data-tab-panel]'),
         canvas: document.getElementById('office-canvas'),
         findingsList: document.getElementById('findings-list'),
+        operationsStatusTitle: document.getElementById('operations-status-title'),
+        operationsStatusBadge: document.getElementById('operations-status-badge'),
+        operationsMetrics: document.getElementById('operations-metrics'),
+        operationsImpacts: document.getElementById('operations-impacts'),
         ismsTabs: document.getElementById('isms-tabs'),
         ismsBody: document.getElementById('isms-body'),
         ismsScoreSummary: document.getElementById('isms-score-summary'),
@@ -253,6 +257,7 @@
         renderGuidance();
         renderTimeline();
         renderDrawerBadge();
+        renderOperationsStatus();
         renderMapModeControls();
         drawOffice();
         renderFindings();
@@ -330,6 +335,14 @@
 
     function timelineItems() {
         const items = [];
+        const operations = state.game.operations;
+
+        items.push({
+            tone: operations.status,
+            meta: `Office function - ${operationalStatusLabel(operations.status)}`,
+            title: `${operations.clinical_capacity_percent}% clinical capacity`,
+            body: `${operations.patient_delay_minutes} minutes expected patient delay, ${operations.closure_risk_percent}% closure risk.`,
+        });
 
         for (const incident of state.game.teaching.incidents) {
             const statusText = incident.status === 'available'
@@ -363,6 +376,37 @@
         }
 
         return items;
+    }
+
+    function renderOperationsStatus() {
+        const operations = state.game.operations;
+        const metrics = [
+            ['Clinical capacity', `${operations.clinical_capacity_percent}%`],
+            ['EHR availability', `${operations.ehr_availability_percent}%`],
+            ['Data availability', `${operations.data_availability_percent}%`],
+            ['Patient delay', `${operations.patient_delay_minutes}m`],
+            ['Exposure', `${operations.confidentiality_exposure_percent}%`],
+            ['Closure risk', `${operations.closure_risk_percent}%`],
+        ];
+
+        els.operationsStatusTitle.textContent = operationalStatusLabel(operations.status);
+        els.operationsStatusBadge.textContent = operationalStatusLabel(operations.status);
+        els.operationsStatusBadge.className = `status-badge ${statusClass(operations.status)}`;
+        els.operationsMetrics.innerHTML = metrics.map(([label, value]) => `
+            <article class="operations-metric">
+                <span>${escapeHtml(label)}</span>
+                <strong>${escapeHtml(value)}</strong>
+            </article>
+        `).join('');
+
+        els.operationsImpacts.innerHTML = operations.active_impacts.length
+            ? operations.active_impacts.map((impact) => `
+                <article class="operations-impact">
+                    <strong>${escapeHtml(impact.title)}</strong>
+                    <span>${escapeHtml(impact.summary)}</span>
+                </article>
+            `).join('')
+            : '<p class="empty-state">No active operational impacts.</p>';
     }
 
     function guidanceItems() {
@@ -1997,14 +2041,27 @@
         }[value] || value;
     }
 
+    function operationalStatusLabel(value) {
+        return {
+            nominal: 'Nominal',
+            watch: 'Watch',
+            disrupted: 'Disrupted',
+            closure_risk: 'Closure risk',
+        }[value] || value;
+    }
+
     function statusClass(value) {
         return {
+            nominal: 'ready',
             resolved: 'ready',
             verified: 'ready',
             passed: 'ready',
+            closure_risk: 'needs_attention',
+            disrupted: 'needs_attention',
             active: 'needs_attention',
             open: 'needs_attention',
             major_findings: 'needs_attention',
+            watch: 'partial',
             available: 'partial',
             in_progress: 'partial',
             done: 'partial',
