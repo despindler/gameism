@@ -963,6 +963,8 @@ final class GameStateRepository
                 'overall_percent' => $report['overall_percent'],
                 'major_findings' => $report['major_findings'],
                 'minor_findings' => $report['minor_findings'],
+                'operational_summary' => $report['operational_summary'] ?? '',
+                'operational_consequences' => $report['operational_consequences'] ?? [],
             ]),
             'findings_json' => $this->encodeJson($report['sampled_findings']),
         ]);

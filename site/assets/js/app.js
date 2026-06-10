@@ -1674,6 +1674,8 @@
             major_findings: report.score.major_findings,
             minor_findings: report.score.minor_findings,
             summary: 'Latest saved simulated audit report.',
+            operational_summary: report.score.operational_summary || '',
+            operational_consequences: report.score.operational_consequences || [],
             sampled_findings: report.findings || [],
         };
     }
@@ -1959,6 +1961,9 @@
     }
 
     function renderCertificationReport(report) {
+        const sampledFindings = report.sampled_findings || [];
+        const operationalConsequences = report.operational_consequences || [];
+
         return `
             <h2>Simulated Audit Report</h2>
             <p class="control-description">${escapeHtml(report.summary)}</p>
@@ -1968,16 +1973,50 @@
                 <div class="audit-metric"><span>Major</span><strong>${report.major_findings}</strong></div>
                 <div class="audit-metric"><span>Minor</span><strong>${report.minor_findings}</strong></div>
             </div>
-            ${report.sampled_findings.length ? `
+            <section class="audit-section">
+                <h3>Operational Resilience</h3>
+                <p class="control-description">${escapeHtml(report.operational_summary || 'No operational events were sampled in this audit run.')}</p>
+                ${operationalConsequences.length ? `
+                    <div class="audit-consequence-list">
+                        ${operationalConsequences.map((consequence) => `
+                            <article class="audit-consequence ${escapeAttr(consequence.severity)}">
+                                <header>
+                                    <div>
+                                        <h4>${escapeHtml(consequence.title)}</h4>
+                                        <span class="finding-meta">${escapeHtml(statusLabel(consequence.status))} - ${escapeHtml(statusLabel(consequence.severity))}</span>
+                                    </div>
+                                </header>
+                                <p class="control-description">${escapeHtml(consequence.summary)}</p>
+                                ${renderAuditConsequenceMetrics(consequence.metrics || {})}
+                            </article>
+                        `).join('')}
+                    </div>
+                ` : '<p class="empty-state">No operational consequences sampled.</p>'}
+            </section>
+            <section class="audit-section">
+                <h3>Sampled Findings</h3>
+                ${sampledFindings.length ? `
                 <div>
-                    ${report.sampled_findings.map((finding) => `
+                    ${sampledFindings.map((finding) => `
                         <article class="finding-item">
                             <div class="finding-title">${escapeHtml(finding.title)}</div>
                             <div class="finding-meta">${escapeHtml(finding.object_name)} - ${escapeHtml(finding.recommendation)}</div>
                         </article>
                     `).join('')}
                 </div>
-            ` : '<p class="empty-state">No sampled findings.</p>'}
+                ` : '<p class="empty-state">No sampled findings.</p>'}
+            </section>
+        `;
+    }
+
+    function renderAuditConsequenceMetrics(metrics) {
+        return `
+            <div class="audit-consequence-metrics">
+                <span>Capacity ${Number(metrics.clinical_capacity_percent ?? 100)}%</span>
+                <span>Data ${Number(metrics.data_availability_percent ?? 100)}%</span>
+                <span>Delay ${Number(metrics.patient_delay_minutes ?? 0)} min</span>
+                <span>Closure risk ${Number(metrics.closure_risk_percent ?? 0)}%</span>
+            </div>
         `;
     }
 
@@ -2072,6 +2111,10 @@
             passed: 'Passed',
             major_findings: 'Major findings',
             minor_findings: 'Minor findings',
+            active: 'Active',
+            resolved: 'Resolved',
+            major: 'Major',
+            minor: 'Minor',
         }[value] || value;
     }
 

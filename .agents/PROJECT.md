@@ -506,3 +506,40 @@ Next steps:
 - Feed operational consequences into the simulated Audit report.
 - Add UI/admin controls for timeline frequency and guidance difficulty.
 - Eventually replace incident drills with a fuller event catalog and role-aware generation.
+
+## Milestone 7 - Operational Audit Consequences
+
+Date: 2026-06-10
+
+Goal: Make the Audit tab evaluate operational resilience outcomes from the living timeline, not only static controls and documentation.
+
+What changed:
+
+- `runAudit` now evaluates the same derived operational state shown in the Office tab and the durable timeline event history.
+- Audit reports now include an `operational_summary` and `operational_consequences` list.
+- Active incident events are sampled as operational audit consequences and can add major findings when the office is degraded.
+- Resolved incident events remain visible as sampled response history and add minor findings.
+- Saved latest audit reports persist the operational section so refreshes keep the same feedback.
+- The Audit tab renders an `Operational Resilience` section with sampled event status, severity, capacity, data availability, delay, and closure-risk metrics.
+- Updated PHP smoke tests and Playwright visual checks to cover active and resolved operational audit feedback.
+- Updated README to describe operational consequences in simulated audit reports.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- The older internal-audit backend remains in place; this milestone focused on strengthening the single visible Audit tab.
+- Operational audit consequences currently sample incident-backed timeline events only.
+- Resolved event history is intentionally less severe than active operational disruption, but it still asks the player to maintain response and effectiveness evidence.
+
+Next steps:
+
+- Decide whether to remove or merge the internal-audit backend under the prototype clean-slate rule.
+- Add difficulty and guidance controls for the Advisor drawer.
+- Expand the event catalog beyond the current incident drills.

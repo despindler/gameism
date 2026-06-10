@@ -314,14 +314,19 @@ final class AuditScoringService
 
     /**
      * @param array<string,mixed> $evaluation
+     * @param array<string,mixed> $operations
+     * @param array<string,mixed> $timeline
      * @return array<string,mixed>
      */
-    public function auditReport(array $evaluation): array
+    public function auditReport(array $evaluation, array $operations = [], array $timeline = []): array
     {
         $score = (int) ($evaluation['score']['overall']['percent'] ?? 0);
         $findings = $evaluation['findings'] ?? [];
-        $majorCount = count(array_filter($findings, static fn (array $finding): bool => $finding['severity'] === 'major'));
-        $minorCount = count(array_filter($findings, static fn (array $finding): bool => $finding['severity'] === 'minor'));
+        $operationalConsequences = $this->operationalConsequences($operations, $timeline);
+        $majorCount = count(array_filter($findings, static fn (array $finding): bool => $finding['severity'] === 'major'))
+            + count(array_filter($operationalConsequences, static fn (array $consequence): bool => $consequence['severity'] === 'major'));
+        $minorCount = count(array_filter($findings, static fn (array $finding): bool => $finding['severity'] === 'minor'))
+            + count(array_filter($operationalConsequences, static fn (array $consequence): bool => $consequence['severity'] === 'minor'));
 
         $status = 'not_ready';
         if ($score >= 85 && $majorCount === 0) {
@@ -337,8 +342,90 @@ final class AuditScoringService
             'minor_findings' => $minorCount,
             'summary' => $this->summaryFor($status),
             'sampled_findings' => array_slice($findings, 0, 8),
+            'operational_summary' => $this->operationalSummary($operations, $operationalConsequences),
+            'operational_consequences' => $operationalConsequences,
             'created_at' => gmdate('c'),
         ];
+    }
+
+    /**
+     * @param array<string,mixed> $operations
+     * @param array<string,mixed> $timeline
+     * @return list<array<string,mixed>>
+     */
+    private function operationalConsequences(array $operations, array $timeline): array
+    {
+        $consequences = [];
+        $events = is_array($timeline['events'] ?? null) ? $timeline['events'] : [];
+
+        foreach ($events as $event) {
+            if (!is_array($event) || ($event['source_type'] ?? '') !== 'incident') {
+                continue;
+            }
+
+            $active = ($event['status'] ?? '') === 'active';
+            $severity = $active && $this->operationsAreMateriallyDegraded($operations, (string) ($event['severity'] ?? 'major'))
+                ? 'major'
+                : 'minor';
+
+            $consequences[] = [
+                'event_key' => (string) ($event['event_key'] ?? ''),
+                'title' => (string) ($event['title'] ?? 'Operational event'),
+                'status' => $active ? 'active' : 'resolved',
+                'severity' => $severity,
+                'summary' => $active
+                    ? 'The event is still affecting clinical operations and must be contained before a clean audit result.'
+                    : 'The event was resolved, but the auditor still samples the response record and effectiveness evidence.',
+                'metrics' => [
+                    'clinical_capacity_percent' => (int) ($operations['clinical_capacity_percent'] ?? 100),
+                    'ehr_availability_percent' => (int) ($operations['ehr_availability_percent'] ?? 100),
+                    'data_availability_percent' => (int) ($operations['data_availability_percent'] ?? 100),
+                    'patient_delay_minutes' => (int) ($operations['patient_delay_minutes'] ?? 0),
+                    'confidentiality_exposure_percent' => (int) ($operations['confidentiality_exposure_percent'] ?? 0),
+                    'closure_risk_percent' => (int) ($operations['closure_risk_percent'] ?? 0),
+                ],
+            ];
+        }
+
+        return array_slice($consequences, 0, 5);
+    }
+
+    /**
+     * @param array<string,mixed> $operations
+     */
+    private function operationsAreMateriallyDegraded(array $operations, string $eventSeverity): bool
+    {
+        return $eventSeverity === 'major'
+            || (string) ($operations['status'] ?? 'nominal') !== 'nominal'
+            || (int) ($operations['clinical_capacity_percent'] ?? 100) < 75
+            || (int) ($operations['data_availability_percent'] ?? 100) < 75
+            || (int) ($operations['patient_delay_minutes'] ?? 0) >= 60
+            || (int) ($operations['closure_risk_percent'] ?? 0) >= 35;
+    }
+
+    /**
+     * @param array<string,mixed> $operations
+     * @param list<array<string,mixed>> $consequences
+     */
+    private function operationalSummary(array $operations, array $consequences): string
+    {
+        if ($consequences === []) {
+            return 'No operational events were sampled in this audit run.';
+        }
+
+        $activeCount = count(array_filter($consequences, static fn (array $consequence): bool => $consequence['status'] === 'active'));
+        $status = (string) ($operations['status'] ?? 'nominal');
+
+        if ($activeCount > 0) {
+            return sprintf(
+                '%d active event%s sampled; current office function is %s.',
+                $activeCount,
+                $activeCount === 1 ? '' : 's',
+                str_replace('_', ' ', $status)
+            );
+        }
+
+        return 'Resolved event history was sampled for response evidence and effectiveness.';
     }
 
     private function summaryFor(string $status): string

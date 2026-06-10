@@ -258,9 +258,13 @@ final class GameStateService
     {
         $repository = $this->repository();
         $repository->ensureInitialized($user['id']);
+        $repository->advanceTimeline($user['id']);
         $objects = $repository->objects($user['id']);
-        $evaluation = $this->scoring->evaluate($objects, $repository->ismsArtifacts($user['id']), $repository->teachingState($user['id']));
-        $report = $this->scoring->auditReport($evaluation);
+        $isms = $repository->ismsArtifacts($user['id']);
+        $teaching = $repository->teachingState($user['id']);
+        $timeline = $repository->timelineState($user['id']);
+        $evaluation = $this->scoring->evaluate($objects, $isms, $teaching);
+        $report = $this->scoring->auditReport($evaluation, $this->operationalState($objects, $isms, $teaching), $timeline);
         $repository->saveAuditReport($user['id'], $report);
 
         return [

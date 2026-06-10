@@ -98,6 +98,12 @@ assertTrue(count($incidentStarted['timeline']['events']) === 1, 'starting an inc
 assertTrue($incidentStarted['timeline']['events'][0]['event_key'] === 'incident:backup_restore_failure', 'timeline event uses a stable incident event key');
 assertTrue($incidentStarted['timeline']['events'][0]['status'] === 'active', 'timeline event is active while incident is active');
 
+$activeIncidentAudit = $game->runAudit($user);
+assertTrue(count($activeIncidentAudit['report']['operational_consequences']) === 1, 'audit report includes active operational consequences');
+assertTrue($activeIncidentAudit['report']['operational_consequences'][0]['status'] === 'active', 'active incident is sampled as active audit consequence');
+assertTrue($activeIncidentAudit['report']['operational_consequences'][0]['severity'] === 'major', 'active degraded operations create a major audit consequence');
+assertTrue(isset($activeIncidentAudit['game_state']['latest_audit']['score']['operational_consequences']), 'latest audit persists operational consequences');
+
 $unverifiedResolutionRejected = false;
 try {
     $game->resolveIncident($user, 'backup_restore_failure');
@@ -148,6 +154,9 @@ assertTrue($invalidControlRejected, 'invalid control is rejected with a stable e
 $audit = $game->runAudit($user);
 assertTrue(isset($audit['report']['status']), 'audit report includes a status');
 assertTrue(isset($audit['game_state']['latest_audit']), 'latest audit is persisted');
+assertTrue(count($audit['report']['operational_consequences']) === 1, 'audit report includes resolved operational event history');
+assertTrue($audit['report']['operational_consequences'][0]['status'] === 'resolved', 'resolved incident is sampled as resolved audit history');
+assertTrue($audit['report']['operational_consequences'][0]['severity'] === 'minor', 'resolved incident history creates a minor audit consequence');
 
 $timelineUser = $auth->register('timeline_user', 'strongpass123', 'Timeline User');
 $timelineInitial = $game->stateForUser($timelineUser);

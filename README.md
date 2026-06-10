@@ -41,7 +41,7 @@ After login, the player configures a small physician office from the floor plan 
 - Offline timeline progression can activate a bounded number of events when the player returns after enough elapsed time.
 - Corrective actions must be completed and verified before related drills can be resolved.
 - Readiness scores combine controls and ISMS artifacts across security, documentation, resilience, and audit categories.
-- The simulated audit report samples missing controls, untreated risks, unverified assets, and incomplete evidence.
+- The simulated audit report samples missing controls, untreated risks, unverified assets, incomplete evidence, and operational consequences from timeline events.
 
 ## Local Run
 
@@ -80,4 +80,4 @@ npx playwright install chromium
 npm run test:visual
 ```
 
-The Playwright test uses `site/.env.test`, resets the configured disposable database through `tests/seed_visual.php`, starts the PHP built-in server with `GAMEISM_ENV_FILE=site/.env.test`, logs in as a seeded user, checks the Timeline and Advisor drawer, checks that the canvas is nonblank and includes the richer floor-plan layers, verifies floor-plan overlay modes, exercises the device profile/configuration modal, and checks the ISMS, Operations, audit-prep stepper, and Audit views.
+The Playwright test uses `site/.env.test`, resets the configured disposable database through `tests/seed_visual.php`, starts the PHP built-in server with `GAMEISM_ENV_FILE=site/.env.test`, logs in as a seeded user, checks the Timeline and Advisor drawer, checks that the canvas is nonblank and includes the richer floor-plan layers, verifies floor-plan overlay modes, exercises the device profile/configuration modal, and checks the ISMS, Operations, audit-prep stepper, and Audit views including operational audit feedback.

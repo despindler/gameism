@@ -198,6 +198,9 @@ test('authenticated office simulation renders and main workflow works', async ({
   await expect(page.getByText('Audit report created.')).toBeVisible();
   await expect(page.locator('#certification-stepper')).toContainText('major');
   await expect(page.getByRole('heading', { name: 'Simulated Audit Report' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Operational Resilience' })).toBeVisible();
+  await expect(page.locator('#audit-panel-body')).toContainText(/active event|active events/);
+  await expect(page.locator('#audit-panel-body')).toContainText(/Capacity|Closure risk/);
 
   await page.setViewportSize({ width: 390, height: 760 });
   await page.getByRole('button', { name: 'Timeline' }).click();
