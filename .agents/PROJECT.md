@@ -685,3 +685,39 @@ Next steps:
 - Finish `UPDATE.md` Milestone 4 by adding a fuller event catalog and richer event context.
 - Finish `UPDATE.md` Milestone 5 by making offline generation posture-aware.
 - Add difficulty and guidance controls for the Advisor drawer.
+
+## Milestone 12 - Richer Event Catalog And Event Context
+
+Date: 2026-06-10
+
+Goal: Finish `UPDATE.md` Milestone 4 by making timeline events feel like a broader operational simulation rather than a small set of renamed incident drills.
+
+What changed:
+
+- Expanded the simulation event catalog from three to six scenarios: phishing against EHR access, lost nurse laptop, ransomware making patient data unavailable, router/internet outage, suspicious Cloud EHR account activity, and backup restore failure.
+- Moved operational impact metrics, impact summaries, and operational context into the event catalog definitions.
+- Persisted catalog impact context inside durable timeline event instances when events are started.
+- Updated operational impact derivation to read from event catalog data instead of hardcoded event-key matches.
+- Added active event context to the affected asset profile modal.
+- Added event impact summaries to Office Operations event cards.
+- Updated smoke tests for catalog initialization, invalid event keys, persisted impact payloads, and mitigation reducing operational impact.
+- Updated Playwright coverage so clicking an affected floor-plan asset exposes active event context in the modal.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- Event generation is still deterministic and chooses the next unused catalog event; posture-aware generation belongs to Milestone 5.
+- Timeline frequency controls and difficulty/guidance controls remain future milestones.
+
+Next steps:
+
+- Finish `UPDATE.md` Milestone 5 by making offline generation posture-aware.
+- Add UI/admin controls for timeline frequency.
+- Add difficulty and guidance controls for the Advisor drawer.

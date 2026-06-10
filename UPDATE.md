@@ -63,10 +63,10 @@ Completed:
 - The old separate internal-audit backend route/table/service has been removed.
 - Audit reports include controls, ISMS artifacts, corrective actions, and operational consequences.
 - Runtime event naming now uses simulation/event terminology rather than teaching/incident-drill terminology.
+- Milestone 4 is now complete: the event catalog includes richer phishing, lost-device, ransomware, network-outage, cloud-account, and backup-recovery scenarios with catalog-driven impact and active event context in asset modals.
 
 Partially done:
 
-- Milestone 4 has the durable event-state foundation, but the catalog is still small and needs richer event types and event context.
 - Milestone 5 has bounded offline progression, but event generation is not yet posture-aware and has no UI/admin frequency controls.
 
 Not started:
@@ -75,8 +75,8 @@ Not started:
 
 Recommended next milestone after cleanup:
 
-1. Finish Milestone 4 by expanding the event catalog and event context.
-2. Finish Milestone 5 by making offline event generation posture-aware.
+1. Finish Milestone 5 by making offline event generation posture-aware.
+2. Add UI/admin controls for timeline frequency.
 3. Then implement Milestone 7 difficulty and guidance controls.
 
 ## Milestone 1 - Clarify Top-Level Navigation

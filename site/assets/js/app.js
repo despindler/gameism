@@ -1248,6 +1248,7 @@
         const risks = linkedItems(state.game.isms.risks, object.object_key);
         const evidence = linkedItems(state.game.isms.evidence, object.object_key);
         const actions = linkedItems(state.game.simulation.corrective_actions, object.object_key);
+        const activeEvents = state.game.simulation.events.filter((event) => event.object_key === object.object_key && event.status === 'active');
         const enabledControls = object.controls.filter((control) => control.enabled).length;
 
         els.deviceModalBody.innerHTML = `
@@ -1278,6 +1279,10 @@
             ${linkedSection('Corrective actions', actions.map((action) => ({
                 title: action.title,
                 meta: `${action.status} - ${action.verification_status}`,
+            })))}
+            ${linkedSection('Active events', activeEvents.map((event) => ({
+                title: event.title,
+                meta: `${event.severity} - ${event.operational_context || event.impact_summary || event.lesson_text}`,
             })))}
         `;
 
@@ -1766,6 +1771,7 @@
                 </header>
                 <p class="control-description">${escapeHtml(event.description)}</p>
                 <p class="control-description">${escapeHtml(event.status === 'available' ? event.trigger_text : event.lesson_text)}</p>
+                ${event.impact_summary ? `<p class="artifact-meta">${escapeHtml(event.impact_summary)}</p>` : ''}
                 ${linkedAction ? `<p class="artifact-meta">Linked action: ${escapeHtml(linkedAction.title)}</p>` : ''}
                 <div class="event-actions">${buttonHtml}</div>
             </article>

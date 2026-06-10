@@ -484,8 +484,11 @@ final class GameStateRepository
                 'status' => $status,
                 'trigger_text' => (string) $definition['trigger_text'],
                 'lesson_text' => (string) $definition['lesson_text'],
+                'operational_context' => (string) ($definition['operational_context'] ?? ''),
+                'impact_summary' => (string) ($definition['impact_summary'] ?? ''),
                 'required_controls' => $definition['required_controls'],
                 'required_evidence' => $definition['required_evidence'],
+                'impact' => $definition['impact'] ?? [],
                 'started_at' => is_array($event) ? (string) $event['occurred_at'] : null,
                 'resolved_at' => is_array($event) ? $event['resolved_at'] : null,
                 'updated_at' => is_array($event) ? (string) $event['updated_at'] : null,
@@ -556,6 +559,9 @@ final class GameStateRepository
             'severity' => $definition['severity'] ?? 'major',
             'status' => 'active',
             'impact' => [
+                'operational_context' => $definition['operational_context'] ?? '',
+                'impact_summary' => $definition['impact_summary'] ?? '',
+                'metrics' => $definition['impact'] ?? [],
                 'required_controls' => $definition['required_controls'] ?? [],
                 'required_evidence' => $definition['required_evidence'] ?? [],
             ],
@@ -795,6 +801,11 @@ final class GameStateRepository
             'title' => (string) $definition['title'],
             'status' => is_array($event) ? (string) $event['status'] : 'available',
             'lesson_text' => (string) $definition['lesson_text'],
+            'operational_context' => (string) ($definition['operational_context'] ?? ''),
+            'impact_summary' => (string) ($definition['impact_summary'] ?? ''),
+            'required_controls' => $definition['required_controls'] ?? [],
+            'required_evidence' => $definition['required_evidence'] ?? [],
+            'impact' => $definition['impact'] ?? [],
         ];
     }
 

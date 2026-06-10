@@ -195,6 +195,19 @@ test('authenticated office simulation renders and main workflow works', async ({
   });
   expect(eventMarkerPixels).toBeGreaterThan(20);
 
+  await page.mouse.click(
+    box.x + mapOffsetX + 24 * mapUnit,
+    box.y + mapOffsetY + 3.5 * mapUnit,
+  );
+  const affectedAssetDialog = page.getByRole('dialog');
+  await expect(affectedAssetDialog).toBeVisible();
+  await expect(affectedAssetDialog.getByRole('heading', { name: 'Cloud EHR' })).toBeVisible();
+  await expect(affectedAssetDialog.getByRole('heading', { name: 'Active events' })).toBeVisible();
+  await expect(affectedAssetDialog).toContainText('Phishing attempt against EHR access');
+  await expect(affectedAssetDialog).toContainText('EHR account trust is uncertain');
+  await affectedAssetDialog.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(affectedAssetDialog).toBeHidden();
+
   await page.getByRole('tab', { name: 'Audit' }).click();
   await expect(page.getByRole('heading', { name: 'Audit', exact: true })).toBeVisible();
   await expect(page.locator('#certification-stepper')).toContainText('Evidence pack');

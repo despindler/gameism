@@ -284,7 +284,7 @@ final class GameStateService
             $evidenceCoverage = $this->requiredEvidenceCoverage($isms['evidence'] ?? [], $requiredEvidence);
             $mitigationPercent = (int) round(($controlCoverage * 0.7) + ($evidenceCoverage * 0.3));
             $impactFactor = max(0.35, 1 - ($mitigationPercent / 100 * 0.65));
-            $impact = $this->eventImpact((string) $event['event_key']);
+            $impact = $this->eventImpact($event);
 
             $metrics['clinical_capacity_percent'] -= (int) round($impact['clinical_capacity_loss'] * $impactFactor);
             $metrics['ehr_availability_percent'] -= (int) round($impact['ehr_availability_loss'] * $impactFactor);
@@ -299,7 +299,7 @@ final class GameStateService
                 'title' => (string) $event['title'],
                 'severity' => (string) $event['severity'],
                 'mitigation_percent' => $mitigationPercent,
-                'summary' => $this->impactSummary((string) $event['event_key'], $mitigationPercent),
+                'summary' => $this->impactSummary($event, $mitigationPercent),
             ];
         }
 
@@ -425,7 +425,7 @@ final class GameStateService
     /**
      * @return array<string,int>
      */
-    private function eventImpact(string $eventKey): array
+    private function eventImpact(array $event): array
     {
         $defaults = [
             'clinical_capacity_loss' => 10,
@@ -435,44 +435,21 @@ final class GameStateService
             'confidentiality_exposure' => 20,
             'closure_risk' => 15,
         ];
+        $impact = is_array($event['impact'] ?? null) ? $event['impact'] : [];
 
-        return match ($eventKey) {
-            'phishing_ehr_password' => [
-                'clinical_capacity_loss' => 30,
-                'ehr_availability_loss' => 45,
-                'data_availability_loss' => 15,
-                'patient_delay_minutes' => 90,
-                'confidentiality_exposure' => 55,
-                'closure_risk' => 25,
-            ],
-            'lost_nurse_laptop' => [
-                'clinical_capacity_loss' => 15,
-                'ehr_availability_loss' => 5,
-                'data_availability_loss' => 10,
-                'patient_delay_minutes' => 45,
-                'confidentiality_exposure' => 65,
-                'closure_risk' => 18,
-            ],
-            'backup_restore_failure' => [
-                'clinical_capacity_loss' => 45,
-                'ehr_availability_loss' => 20,
-                'data_availability_loss' => 70,
-                'patient_delay_minutes' => 180,
-                'confidentiality_exposure' => 15,
-                'closure_risk' => 65,
-            ],
-            default => $defaults,
-        };
+        return array_map('intval', array_replace($defaults, array_intersect_key($impact, $defaults)));
     }
 
-    private function impactSummary(string $eventKey, int $mitigationPercent): string
+    /**
+     * @param array<string,mixed> $event
+     */
+    private function impactSummary(array $event, int $mitigationPercent): string
     {
-        $impact = match ($eventKey) {
-            'phishing_ehr_password' => 'EHR access and account trust are under pressure.',
-            'lost_nurse_laptop' => 'A lost endpoint creates confidentiality and continuity pressure.',
-            'backup_restore_failure' => 'Patient data recovery is impaired until restore evidence is fixed.',
-            default => 'The office is operating under degraded conditions.',
-        };
+        $impact = trim((string) ($event['impact_summary'] ?? ''));
+
+        if ($impact === '') {
+            $impact = 'The office is operating under degraded conditions.';
+        }
 
         return $impact . ' Current mitigation is ' . $mitigationPercent . '%.';
     }

@@ -39,7 +39,10 @@ assertTrue(count($initial['map']['objects']) === 10, 'initial office has ten int
 assertTrue(count($initial['isms']['assets']) === 8, 'initial ISMS inventory has eight assets');
 assertTrue(count($initial['isms']['risks']) === 6, 'initial risk register has six risks');
 assertTrue(count($initial['isms']['evidence']) === 8, 'initial evidence checklist has eight items');
-assertTrue(count($initial['simulation']['events']) === 3, 'initial scenario has three simulation events');
+assertTrue(count($initial['simulation']['events']) === 6, 'initial scenario has six simulation events');
+foreach (['lost_nurse_laptop', 'ransomware_patient_data_unavailable', 'router_internet_outage', 'backup_restore_failure', 'suspicious_cloud_account_activity'] as $expectedEventKey) {
+    assertTrue(in_array($expectedEventKey, array_column($initial['simulation']['events'], 'event_key'), true), 'event catalog includes ' . $expectedEventKey);
+}
 assertTrue(count($initial['simulation']['corrective_actions']) === 0, 'initial scenario has no corrective actions');
 assertTrue(!array_key_exists('teaching', $initial), 'game state no longer exposes teaching state');
 assertTrue(count($initial['timeline']['events']) === 0, 'initial timeline has no generated event instances');
@@ -93,6 +96,8 @@ assertTrue($invalidStatusRejected, 'invalid evidence status is rejected with a s
 $eventStarted = $game->startEvent($user, 'backup_restore_failure');
 assertTrue($eventStarted['simulation']['events'][0]['status'] === 'active', 'starting an event marks it active');
 assertTrue(count($eventStarted['simulation']['corrective_actions']) === 1, 'starting an event creates a corrective action');
+assertTrue($eventStarted['simulation']['events'][0]['impact']['data_availability_loss'] === 70, 'event exposes catalog-driven impact metrics');
+assertTrue($eventStarted['simulation']['events'][0]['operational_context'] !== '', 'event exposes operational context');
 assertTrue($eventStarted['operations']['data_availability_percent'] < $evidenceReady['operations']['data_availability_percent'], 'active backup event reduces data availability');
 assertTrue($eventStarted['operations']['patient_delay_minutes'] > $evidenceReady['operations']['patient_delay_minutes'], 'active backup event creates patient delay');
 assertTrue($eventStarted['operations']['closure_risk_percent'] > $evidenceReady['operations']['closure_risk_percent'], 'active backup event increases closure risk');
@@ -101,6 +106,15 @@ assertTrue(count($eventStarted['timeline']['events']) === 1, 'starting an event 
 assertTrue($eventStarted['timeline']['events'][0]['event_key'] === 'event:backup_restore_failure', 'timeline event uses a stable event key');
 assertTrue($eventStarted['timeline']['events'][0]['source_type'] === 'event', 'timeline event uses event source type');
 assertTrue($eventStarted['timeline']['events'][0]['status'] === 'active', 'timeline event is active while event is active');
+assertTrue($eventStarted['timeline']['events'][0]['impact']['metrics']['data_availability_loss'] === 70, 'timeline event persists catalog impact metrics');
+
+$invalidEventRejected = false;
+try {
+    $game->startEvent($user, 'not_a_timeline_event');
+} catch (ApiException $exception) {
+    $invalidEventRejected = $exception->apiCode() === 'EVENT_NOT_FOUND';
+}
+assertTrue($invalidEventRejected, 'invalid event key is rejected with a stable error code');
 
 $activeEventAudit = $game->runAudit($user);
 assertTrue(count($activeEventAudit['report']['operational_consequences']) === 1, 'audit report includes active operational consequences');
@@ -149,6 +163,30 @@ try {
     $invalidControlRejected = $exception->apiCode() === 'INVALID_CONTROL';
 }
 assertTrue($invalidControlRejected, 'invalid control is rejected with a stable error code');
+
+$weakEventUser = $auth->register('weak_event_user', 'strongpass123', 'Weak Event User');
+$weakEventInitial = $game->stateForUser($weakEventUser);
+$weakRansomware = $game->startEvent($weakEventUser, 'ransomware_patient_data_unavailable');
+assertTrue($weakRansomware['operations']['data_availability_percent'] < $weakEventInitial['operations']['data_availability_percent'], 'ransomware event degrades weak recovery posture');
+
+$strongEventUser = $auth->register('strong_event_user', 'strongpass123', 'Strong Event User');
+$game->configureObject($strongEventUser, 'doctor_pc', [
+    'patching_current' => true,
+]);
+$game->configureObject($strongEventUser, 'backup_nas', [
+    'backup_schedule' => true,
+    'restore_test' => true,
+    'offline_or_immutable_copy' => true,
+]);
+$game->configureObject($strongEventUser, 'isms_binder', [
+    'incident_procedure' => true,
+]);
+$game->updateIsmsItem($strongEventUser, 'evidence', 'backup_restore_test', ['status' => 'ready']);
+$game->updateIsmsItem($strongEventUser, 'evidence', 'risk_register_review', ['status' => 'ready']);
+$game->updateIsmsItem($strongEventUser, 'evidence', 'incident_procedure_record', ['status' => 'ready']);
+$strongRansomware = $game->startEvent($strongEventUser, 'ransomware_patient_data_unavailable');
+assertTrue($strongRansomware['operations']['data_availability_percent'] > $weakRansomware['operations']['data_availability_percent'], 'mitigating controls reduce data availability impact');
+assertTrue($strongRansomware['operations']['closure_risk_percent'] < $weakRansomware['operations']['closure_risk_percent'], 'mitigating controls reduce closure risk impact');
 
 $audit = $game->runAudit($user);
 assertTrue(isset($audit['report']['status']), 'audit report includes a status');
