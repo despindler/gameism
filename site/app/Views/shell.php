@@ -203,6 +203,23 @@
             <section id="drawer-panel-timeline" class="drawer-panel active" role="tabpanel" aria-labelledby="drawer-tab-timeline" data-drawer-panel="timeline">
                 <p id="timeline-summary" class="asset-type"></p>
                 <div id="timeline-list" class="timeline-list"></div>
+                <form id="timeline-settings-form" class="timeline-settings" hidden>
+                    <header>
+                        <div>
+                            <p class="eyebrow">Admin</p>
+                            <h3>Timeline Settings</h3>
+                        </div>
+                    </header>
+                    <label>
+                        Advance after minutes
+                        <input name="offline_event_minutes" type="number" min="15" max="10080" step="15" required>
+                    </label>
+                    <label>
+                        Max events per advance
+                        <input name="max_events_per_advance" type="number" min="1" max="3" step="1" required>
+                    </label>
+                    <button type="submit">Update timeline</button>
+                </form>
             </section>
             <section id="drawer-panel-advisor" class="drawer-panel" role="tabpanel" aria-labelledby="drawer-tab-advisor" data-drawer-panel="advisor" hidden>
                 <section id="guidance-panel" class="guidance-panel" aria-label="Guidance hints">

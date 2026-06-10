@@ -24,8 +24,13 @@ test('authenticated office simulation renders and main workflow works', async ({
   await page.getByRole('button', { name: 'Timeline' }).click();
   const drawer = page.locator('#info-drawer');
   await expect(drawer).toBeVisible();
-  await expect(drawer.getByRole('heading', { name: 'Timeline' })).toBeVisible();
+  await expect(drawer.getByRole('heading', { name: 'Timeline', exact: true })).toBeVisible();
   await expect(drawer.locator('#timeline-summary')).toContainText('active events');
+  await expect(drawer.getByRole('heading', { name: 'Timeline Settings' })).toBeVisible();
+  await drawer.getByLabel('Advance after minutes').fill('90');
+  await drawer.getByLabel('Max events per advance').fill('2');
+  await drawer.getByRole('button', { name: 'Update timeline' }).click();
+  await expect(page.getByText('Timeline settings updated.')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(drawer).toBeHidden();
 

@@ -51,6 +51,9 @@ final class GameStateService
             'isms' => $isms,
             'simulation' => $simulation,
             'timeline' => $timeline,
+            'settings' => [
+                'timeline' => $user['role'] === 'admin' ? $repository->timelineSettings() : null,
+            ],
             'operations' => $this->operationalState($objects, $isms, $simulation),
             'score' => $evaluation['score'],
             'findings' => $evaluation['findings'],
@@ -161,6 +164,36 @@ final class GameStateService
         $repository = $this->repository();
         $repository->ensureInitialized($user['id']);
         $repository->startEvent($user['id'], $eventKey);
+
+        return $this->stateForUser($user);
+    }
+
+    /**
+     * @param array{id:int,username:string,display_name:string,role:string} $user
+     * @param array<string,mixed> $settings
+     * @return array<string,mixed>
+     */
+    public function updateTimelineSettings(array $user, array $settings): array
+    {
+        if ($user['role'] !== 'admin') {
+            throw new ApiException('TIMELINE_SETTINGS_FORBIDDEN', 403, 'Only administrators can update timeline settings.');
+        }
+
+        $offlineEventMinutes = $this->boundedInt(
+            $settings['offline_event_minutes'] ?? null,
+            15,
+            10080,
+            'INVALID_TIMELINE_INTERVAL'
+        );
+        $maxEventsPerAdvance = $this->boundedInt(
+            $settings['max_events_per_advance'] ?? null,
+            1,
+            3,
+            'INVALID_TIMELINE_EVENT_CAP'
+        );
+
+        $repository = $this->repository();
+        $repository->updateTimelineSettings($offlineEventMinutes, $maxEventsPerAdvance);
 
         return $this->stateForUser($user);
     }

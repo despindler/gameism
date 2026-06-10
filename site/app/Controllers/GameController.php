@@ -119,6 +119,22 @@ final class GameController
     /**
      * @return array<string,mixed>
      */
+    public function updateTimelineSettings(Request $request): array
+    {
+        $user = $this->auth->requireUser();
+
+        return [
+            'ok' => true,
+            'game_state' => $this->game->updateTimelineSettings(
+                $user,
+                $request->object('settings')
+            ),
+        ];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
     public function runAudit(): array
     {
         $user = $this->auth->requireUser();

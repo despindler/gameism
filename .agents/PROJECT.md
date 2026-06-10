@@ -756,3 +756,37 @@ Next steps:
 - Add UI/admin controls for timeline frequency if we want operators to tune pacing without editing seed/config.
 - Implement difficulty and guidance controls for the Advisor drawer.
 - Continue tuning event weights after playtesting the current deterministic ranking.
+
+## Milestone 14 - Timeline Frequency Controls
+
+Date: 2026-06-10
+
+Goal: Expose the existing offline timeline pacing settings through an admin UI instead of requiring seed/config edits.
+
+What changed:
+
+- Added `POST /api/update-timeline-settings`.
+- Added admin-only timeline settings to `game_state.settings.timeline`.
+- Added server-side validation for offline event interval and maximum events per advance.
+- Persisted updates to `app_settings` using the existing timeline setting keys.
+- Added an admin-only Timeline Settings form inside the Timeline drawer.
+- Updated Playwright coverage to edit and save timeline settings from the drawer.
+- Updated PHP smoke tests for admin visibility, persistence, invalid interval rejection, and non-admin rejection.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- Timeline pacing is global for the app, not per player.
+- The form is intentionally placed in the Timeline drawer because it controls simulation feed pacing.
+
+Next steps:
+
+- Implement difficulty and guidance controls for the Advisor drawer.
+- Continue tuning event selection and impact weights after playtesting.

@@ -467,6 +467,45 @@ label {
     margin-top: 12px;
 }
 
+.timeline-settings {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+}
+
+.timeline-settings[hidden] {
+    display: none;
+}
+
+.timeline-settings header h3 {
+    margin: 0;
+    font-size: 0.98rem;
+    letter-spacing: 0;
+}
+
+.timeline-settings label {
+    display: grid;
+    gap: 5px;
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+
+.timeline-settings input {
+    min-height: 36px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 9px;
+    color: var(--ink);
+}
+
+.timeline-settings button {
+    justify-self: start;
+    min-height: 34px;
+    padding: 7px 11px;
+}
+
 .timeline-card {
     display: grid;
     gap: 6px;

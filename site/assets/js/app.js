@@ -47,6 +47,7 @@
         drawerPanels: document.querySelectorAll('[data-drawer-panel]'),
         timelineSummary: document.getElementById('timeline-summary'),
         timelineList: document.getElementById('timeline-list'),
+        timelineSettingsForm: document.getElementById('timeline-settings-form'),
         logout: document.getElementById('logout'),
         primaryTabs: document.getElementById('primary-tabs'),
         guidancePanel: document.getElementById('guidance-panel'),
@@ -255,6 +256,7 @@
         renderHud();
         renderGuidance();
         renderTimeline();
+        renderTimelineSettings();
         renderDrawerBadge();
         renderOperationsStatus();
         renderMapModeControls();
@@ -320,6 +322,23 @@
                 <p>${escapeHtml(item.body)}</p>
             </article>
         `).join('');
+    }
+
+    function renderTimelineSettings() {
+        const settings = state.game.settings && state.game.settings.timeline;
+
+        if (!settings) {
+            els.timelineSettingsForm.hidden = true;
+            return;
+        }
+
+        els.timelineSettingsForm.hidden = false;
+        els.timelineSettingsForm.elements.offline_event_minutes.value = String(settings.offline_event_minutes);
+        els.timelineSettingsForm.elements.max_events_per_advance.value = String(settings.max_events_per_advance);
+
+        for (const input of els.timelineSettingsForm.querySelectorAll('input, button')) {
+            input.disabled = state.busy;
+        }
     }
 
     function renderDrawerBadge() {
@@ -1612,6 +1631,34 @@
         bindOperationsControls();
     }
 
+    async function updateTimelineSettings() {
+        if (state.busy || !state.game.settings || !state.game.settings.timeline) {
+            return;
+        }
+
+        state.busy = true;
+        renderTimelineSettings();
+
+        try {
+            const payload = await api('update-timeline-settings', {
+                method: 'POST',
+                body: {
+                    settings: {
+                        offline_event_minutes: els.timelineSettingsForm.elements.offline_event_minutes.value,
+                        max_events_per_advance: els.timelineSettingsForm.elements.max_events_per_advance.value,
+                    },
+                },
+            });
+            state.game = payload.game_state;
+            showToast('Timeline settings updated.');
+        } catch (error) {
+            showToast(error.message);
+        } finally {
+            state.busy = false;
+            render();
+        }
+    }
+
     function setDrawerTab(tabKey) {
         state.activeDrawerTab = tabKey === 'advisor' ? 'advisor' : 'timeline';
         els.drawerTitle.textContent = state.activeDrawerTab === 'advisor' ? 'Advisor' : 'Timeline';
@@ -2287,6 +2334,11 @@
         }
 
         setDrawerTab(button.dataset.drawerTab);
+    });
+
+    els.timelineSettingsForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        updateTimelineSettings();
     });
 
     els.primaryTabs.addEventListener('click', (event) => {

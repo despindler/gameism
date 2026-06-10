@@ -65,10 +65,11 @@ Completed:
 - Runtime event naming now uses simulation/event terminology rather than teaching/incident-drill terminology.
 - Milestone 4 is now complete: the event catalog includes richer phishing, lost-device, ransomware, network-outage, cloud-account, and backup-recovery scenarios with catalog-driven impact and active event context in asset modals.
 - Milestone 5 posture-aware offline generation is now complete: elapsed-time events are selected by residual control/evidence risk and carry generation context in the durable timeline event payload.
+- Timeline frequency controls are now available to admins in the Timeline drawer and persist to `app_settings`.
 
 Partially done:
 
-- Timeline frequency has seed/config settings, but there is no UI/admin control surface yet.
+- Event selection and impact weights will still need tuning after playtesting.
 
 Not started:
 
@@ -76,9 +77,8 @@ Not started:
 
 Recommended next milestone after cleanup:
 
-1. Add UI/admin controls for timeline frequency.
-2. Implement Milestone 7 difficulty and guidance controls.
-3. Continue tuning event selection and impact weights after more playtesting.
+1. Implement Milestone 7 difficulty and guidance controls.
+2. Continue tuning event selection and impact weights after more playtesting.
 
 ## Milestone 1 - Clarify Top-Level Navigation
 

@@ -397,6 +397,23 @@ final class GameStateRepository
     }
 
     /**
+     * @return array<string,int>
+     */
+    public function timelineSettings(): array
+    {
+        return [
+            'offline_event_minutes' => $this->settingInt('game.timeline.offline_event_minutes', 120),
+            'max_events_per_advance' => $this->settingInt('game.timeline.max_events_per_advance', 1),
+        ];
+    }
+
+    public function updateTimelineSettings(int $offlineEventMinutes, int $maxEventsPerAdvance): void
+    {
+        $this->upsertSetting('game.timeline.offline_event_minutes', (string) $offlineEventMinutes, 'integer');
+        $this->upsertSetting('game.timeline.max_events_per_advance', (string) $maxEventsPerAdvance, 'integer');
+    }
+
+    /**
      * @param list<array<string,mixed>> $objects
      * @param array<string,list<array<string,mixed>>> $isms
      */
@@ -801,6 +818,20 @@ final class GameStateRepository
         }
 
         return (int) $value;
+    }
+
+    private function upsertSetting(string $key, string $value, string $type): void
+    {
+        $statement = $this->pdo->prepare(
+            'INSERT INTO app_settings (setting_key, setting_value, value_type)
+             VALUES (:setting_key, :setting_value, :value_type)
+             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), value_type = VALUES(value_type), updated_at = CURRENT_TIMESTAMP'
+        );
+        $statement->execute([
+            'setting_key' => $key,
+            'setting_value' => $value,
+            'value_type' => $type,
+        ]);
     }
 
     /**

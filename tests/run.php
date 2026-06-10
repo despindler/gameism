@@ -50,6 +50,40 @@ assertTrue($initial['score']['overall']['percent'] < 60, 'initial scenario start
 assertTrue($initial['operations']['clinical_capacity_percent'] === 100, 'initial office has full clinical capacity before incidents');
 assertTrue($initial['operations']['ehr_availability_percent'] === 100, 'initial EHR availability is normal before incidents');
 assertTrue($initial['operations']['confidentiality_exposure_percent'] > 0, 'missing security controls create operational exposure');
+assertTrue($initial['settings']['timeline']['offline_event_minutes'] === 120, 'admin game state exposes timeline interval setting');
+assertTrue($initial['settings']['timeline']['max_events_per_advance'] === 1, 'admin game state exposes timeline event cap setting');
+
+$settingsUpdated = $game->updateTimelineSettings($user, [
+    'offline_event_minutes' => '60',
+    'max_events_per_advance' => '2',
+]);
+assertTrue($settingsUpdated['settings']['timeline']['offline_event_minutes'] === 60, 'admin can update timeline interval');
+assertTrue($settingsUpdated['settings']['timeline']['max_events_per_advance'] === 2, 'admin can update timeline event cap');
+
+$invalidTimelineIntervalRejected = false;
+try {
+    $game->updateTimelineSettings($user, [
+        'offline_event_minutes' => '5',
+        'max_events_per_advance' => '2',
+    ]);
+} catch (ApiException $exception) {
+    $invalidTimelineIntervalRejected = $exception->apiCode() === 'INVALID_TIMELINE_INTERVAL';
+}
+assertTrue($invalidTimelineIntervalRejected, 'invalid timeline interval is rejected with a stable error code');
+
+$playerUser = $auth->register('settings_player', 'strongpass123', 'Settings Player');
+$playerState = $game->stateForUser($playerUser);
+assertTrue($playerState['settings']['timeline'] === null, 'non-admin game state does not expose timeline settings');
+$playerTimelineSettingsRejected = false;
+try {
+    $game->updateTimelineSettings($playerUser, [
+        'offline_event_minutes' => '60',
+        'max_events_per_advance' => '1',
+    ]);
+} catch (ApiException $exception) {
+    $playerTimelineSettingsRejected = $exception->apiCode() === 'TIMELINE_SETTINGS_FORBIDDEN';
+}
+assertTrue($playerTimelineSettingsRejected, 'non-admin timeline setting update is rejected with a stable error code');
 
 $before = $initial['score']['overall']['percent'];
 $initialExposure = $initial['operations']['confidentiality_exposure_percent'];
