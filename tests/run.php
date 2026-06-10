@@ -203,12 +203,37 @@ $timelineAdvanced = $game->stateForUser($timelineUser);
 assertTrue($timelineAdvanced['timeline']['active_count'] === 1, 'offline progression creates one active timeline event');
 assertTrue(count($timelineAdvanced['timeline']['events']) === 1, 'offline progression is bounded to one event');
 assertTrue($timelineAdvanced['simulation']['events'][0]['status'] === 'active', 'offline progression activates the next available event');
+assertTrue($timelineAdvanced['simulation']['events'][0]['event_key'] === 'ransomware_patient_data_unavailable', 'weak recovery posture selects the highest residual offline event');
 assertTrue(count($timelineAdvanced['simulation']['corrective_actions']) === 1, 'offline progression creates a corrective action for the event');
+assertTrue($timelineAdvanced['timeline']['events'][0]['impact']['generation']['offline_generated'] === true, 'offline event records generation context');
+assertTrue($timelineAdvanced['timeline']['events'][0]['impact']['generation']['mitigation_percent'] < 50, 'weak offline event records low mitigation');
 $timelineRepeated = $game->stateForUser($timelineUser);
 assertTrue(count($timelineRepeated['timeline']['events']) === 1, 'repeated game-state reads do not duplicate offline events');
 $pdo->exec('UPDATE timeline_states SET last_advanced_at = UTC_TIMESTAMP() - INTERVAL 3 HOUR WHERE user_id = ' . (int) $timelineUser['id']);
 $timelineStillBounded = $game->stateForUser($timelineUser);
 assertTrue(count($timelineStillBounded['timeline']['events']) === 1, 'active timeline event blocks further offline generation');
+
+$hardenedTimelineUser = $auth->register('hardened_timeline_user', 'strongpass123', 'Hardened Timeline User');
+$game->configureObject($hardenedTimelineUser, 'doctor_pc', [
+    'patching_current' => true,
+]);
+$game->configureObject($hardenedTimelineUser, 'backup_nas', [
+    'backup_schedule' => true,
+    'restore_test' => true,
+    'offline_or_immutable_copy' => true,
+]);
+$game->configureObject($hardenedTimelineUser, 'isms_binder', [
+    'incident_procedure' => true,
+]);
+$game->updateIsmsItem($hardenedTimelineUser, 'evidence', 'backup_restore_test', ['status' => 'ready']);
+$game->updateIsmsItem($hardenedTimelineUser, 'evidence', 'risk_register_review', ['status' => 'ready']);
+$game->updateIsmsItem($hardenedTimelineUser, 'evidence', 'incident_procedure_record', ['status' => 'ready']);
+$pdo->exec('UPDATE timeline_states SET last_advanced_at = UTC_TIMESTAMP() - INTERVAL 3 HOUR WHERE user_id = ' . (int) $hardenedTimelineUser['id']);
+$hardenedTimelineAdvanced = $game->stateForUser($hardenedTimelineUser);
+assertTrue($hardenedTimelineAdvanced['timeline']['active_count'] === 1, 'hardened offline user still gets a bounded event');
+assertTrue($hardenedTimelineAdvanced['simulation']['events'][0]['event_key'] !== 'ransomware_patient_data_unavailable', 'hardened recovery posture reduces ransomware event likelihood');
+assertTrue($hardenedTimelineAdvanced['operations']['closure_risk_percent'] < $timelineAdvanced['operations']['closure_risk_percent'], 'hardened offline posture reduces operational closure risk');
+assertTrue($hardenedTimelineAdvanced['timeline']['events'][0]['impact']['generation']['residual_risk_score'] < $timelineAdvanced['timeline']['events'][0]['impact']['generation']['residual_risk_score'], 'hardened offline event records lower residual risk');
 
 echo "OK: smoke tests passed.\n";
 

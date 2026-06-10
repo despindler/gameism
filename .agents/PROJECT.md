@@ -721,3 +721,38 @@ Next steps:
 - Finish `UPDATE.md` Milestone 5 by making offline generation posture-aware.
 - Add UI/admin controls for timeline frequency.
 - Add difficulty and guidance controls for the Advisor drawer.
+
+## Milestone 13 - Posture-Aware Offline Timeline Generation
+
+Date: 2026-06-10
+
+Goal: Finish the core simulation behavior in `UPDATE.md` Milestone 5 by making offline event generation respond to the office's current security and ISMS posture.
+
+What changed:
+
+- Moved timeline advancement in `stateForUser` and `runAudit` to occur after current office objects and ISMS artifacts are loaded.
+- Replaced first-unused offline event selection with deterministic residual-risk ranking.
+- Ranked unused event scenarios by catalog impact multiplied by missing required controls and evidence.
+- Added generation context to durable timeline event impact payloads: offline-generated flag, mitigation percent, residual risk score, and selection reason.
+- Downgraded offline-generated event severity to minor when the event's required controls and evidence are already strongly mitigated.
+- Updated simulation event rows to reflect persisted timeline severity for active/resolved event instances.
+- Extended smoke tests for weak-posture selection, recovery-hardened selection, residual-risk context, bounded generation, and reduced closure risk.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- Generation is still deterministic for reproducibility; randomization and explicit seeds can be added later when the simulation needs more variety.
+- Timeline frequency values still live in seed/config settings rather than a UI/admin control surface.
+
+Next steps:
+
+- Add UI/admin controls for timeline frequency if we want operators to tune pacing without editing seed/config.
+- Implement difficulty and guidance controls for the Advisor drawer.
+- Continue tuning event weights after playtesting the current deterministic ranking.

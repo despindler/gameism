@@ -396,7 +396,11 @@ final class GameStateRepository
         ];
     }
 
-    public function advanceTimeline(int $userId): void
+    /**
+     * @param list<array<string,mixed>> $objects
+     * @param array<string,list<array<string,mixed>>> $isms
+     */
+    public function advanceTimeline(int $userId, array $objects, array $isms): void
     {
         $intervalMinutes = $this->settingInt('game.timeline.offline_event_minutes', 120);
         $maxEvents = $this->settingInt('game.timeline.max_events_per_advance', 1);
@@ -412,13 +416,18 @@ final class GameStateRepository
             return;
         }
 
-        $eventKey = $this->nextAvailableEventKey($userId);
+        $candidate = $this->nextPostureAwareEvent($userId, $objects, $isms);
 
-        if ($eventKey === null) {
+        if ($candidate === null) {
             return;
         }
 
-        $this->startEvent($userId, $eventKey);
+        $this->startEvent($userId, (string) $candidate['event_key'], [
+            'offline_generated' => true,
+            'mitigation_percent' => $candidate['mitigation_percent'],
+            'residual_risk_score' => $candidate['residual_risk_score'],
+            'selection_reason' => $candidate['selection_reason'],
+        ]);
     }
 
     /**
@@ -480,7 +489,7 @@ final class GameStateRepository
                 'object_key' => (string) $definition['object_key'],
                 'title' => (string) $definition['title'],
                 'description' => (string) $definition['description'],
-                'severity' => (string) $definition['severity'],
+                'severity' => is_array($event) ? (string) $event['severity'] : (string) $definition['severity'],
                 'status' => $status,
                 'trigger_text' => (string) $definition['trigger_text'],
                 'lesson_text' => (string) $definition['lesson_text'],
@@ -540,7 +549,10 @@ final class GameStateRepository
         return $items;
     }
 
-    public function startEvent(int $userId, string $eventKey): void
+    /**
+     * @param array<string,mixed> $generationContext
+     */
+    public function startEvent(int $userId, string $eventKey, array $generationContext = []): void
     {
         $event = $this->eventScenario($userId, $eventKey);
 
@@ -549,6 +561,12 @@ final class GameStateRepository
         }
 
         $definition = $this->eventDefinition($eventKey);
+        $severity = (string) ($definition['severity'] ?? 'major');
+
+        if (($generationContext['offline_generated'] ?? false) === true && (int) ($generationContext['mitigation_percent'] ?? 0) >= 70) {
+            $severity = 'minor';
+        }
+
         $this->upsertTimelineEvent($userId, [
             'event_key' => 'event:' . $eventKey,
             'source_type' => 'event',
@@ -556,7 +574,7 @@ final class GameStateRepository
             'object_key' => $event['object_key'],
             'title' => $event['title'],
             'body' => $event['lesson_text'],
-            'severity' => $definition['severity'] ?? 'major',
+            'severity' => $severity,
             'status' => 'active',
             'impact' => [
                 'operational_context' => $definition['operational_context'] ?? '',
@@ -564,6 +582,7 @@ final class GameStateRepository
                 'metrics' => $definition['impact'] ?? [],
                 'required_controls' => $definition['required_controls'] ?? [],
                 'required_evidence' => $definition['required_evidence'] ?? [],
+                'generation' => $generationContext,
             ],
         ]);
         $this->createCorrectiveAction($userId, [
@@ -607,7 +626,12 @@ final class GameStateRepository
         $this->resolveTimelineEvent($userId, 'event:' . $eventKey);
     }
 
-    private function nextAvailableEventKey(int $userId): ?string
+    /**
+     * @param list<array<string,mixed>> $objects
+     * @param array<string,list<array<string,mixed>>> $isms
+     * @return array<string,mixed>|null
+     */
+    private function nextPostureAwareEvent(int $userId, array $objects, array $isms): ?array
     {
         $usedKeys = [];
 
@@ -617,15 +641,107 @@ final class GameStateRepository
             }
         }
 
-        foreach (GameCatalog::eventScenarios() as $definition) {
+        $candidates = [];
+
+        foreach (GameCatalog::eventScenarios() as $index => $definition) {
             $eventKey = (string) $definition['event_key'];
 
-            if (!isset($usedKeys[$eventKey])) {
-                return $eventKey;
+            if (isset($usedKeys[$eventKey])) {
+                continue;
+            }
+
+            $requiredControls = is_array($definition['required_controls'] ?? null) ? $definition['required_controls'] : [];
+            $requiredEvidence = is_array($definition['required_evidence'] ?? null) ? $definition['required_evidence'] : [];
+            $controlCoverage = $this->requiredControlCoverage($objects, $requiredControls);
+            $evidenceCoverage = $this->requiredEvidenceCoverage($isms['evidence'] ?? [], $requiredEvidence);
+            $mitigationPercent = (int) round(($controlCoverage * 0.7) + ($evidenceCoverage * 0.3));
+            $impactScore = $this->eventImpactScore(is_array($definition['impact'] ?? null) ? $definition['impact'] : []);
+            $residualRiskScore = (int) round($impactScore * ((100 - $mitigationPercent) / 100));
+            $candidates[] = [
+                'event_key' => $eventKey,
+                'catalog_index' => $index,
+                'mitigation_percent' => $mitigationPercent,
+                'residual_risk_score' => $residualRiskScore,
+                'selection_reason' => 'Selected from current control and evidence gaps.',
+            ];
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        usort($candidates, static function (array $a, array $b): int {
+            return ((int) $b['residual_risk_score'] <=> (int) $a['residual_risk_score'])
+                ?: ((int) $a['mitigation_percent'] <=> (int) $b['mitigation_percent'])
+                ?: ((int) $a['catalog_index'] <=> (int) $b['catalog_index']);
+        });
+
+        return $candidates[0];
+    }
+
+    /**
+     * @param list<array<string,mixed>> $objects
+     * @param list<string> $controlKeys
+     */
+    private function requiredControlCoverage(array $objects, array $controlKeys): int
+    {
+        if ($controlKeys === []) {
+            return 100;
+        }
+
+        $enabled = 0;
+
+        foreach ($controlKeys as $controlKey) {
+            foreach ($objects as $object) {
+                $allowed = $object['metadata']['controls'] ?? [];
+
+                if (is_array($allowed) && in_array($controlKey, $allowed, true) && (bool) ($object['config'][$controlKey] ?? false)) {
+                    $enabled++;
+                    break;
+                }
             }
         }
 
-        return null;
+        return (int) round(($enabled / count($controlKeys)) * 100);
+    }
+
+    /**
+     * @param list<array<string,mixed>> $evidenceItems
+     * @param list<string> $evidenceKeys
+     */
+    private function requiredEvidenceCoverage(array $evidenceItems, array $evidenceKeys): int
+    {
+        if ($evidenceKeys === []) {
+            return 100;
+        }
+
+        $ready = 0;
+
+        foreach ($evidenceKeys as $evidenceKey) {
+            foreach ($evidenceItems as $evidence) {
+                if ((string) $evidence['evidence_key'] === $evidenceKey && in_array((string) $evidence['status'], ['ready', 'reviewed'], true)) {
+                    $ready++;
+                    break;
+                }
+            }
+        }
+
+        return (int) round(($ready / count($evidenceKeys)) * 100);
+    }
+
+    /**
+     * @param array<string,mixed> $impact
+     */
+    private function eventImpactScore(array $impact): int
+    {
+        return (int) round(
+            (int) ($impact['clinical_capacity_loss'] ?? 10)
+            + (int) ($impact['ehr_availability_loss'] ?? 10)
+            + (int) ($impact['data_availability_loss'] ?? 10)
+            + ((int) ($impact['patient_delay_minutes'] ?? 30) / 4)
+            + ((int) ($impact['confidentiality_exposure'] ?? 20) / 2)
+            + (int) ($impact['closure_risk'] ?? 15)
+        );
     }
 
     private function activeTimelineEventCount(int $userId): int

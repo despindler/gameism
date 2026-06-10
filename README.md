@@ -39,7 +39,7 @@ After login, the player configures a small physician office from the floor plan 
 - Evidence items track whether audit evidence is missing, draft, ready, or reviewed.
 - Simulation events are persisted as durable timeline events, draw from a catalog of phishing, lost-device, ransomware, network-outage, cloud-account, and backup-recovery scenarios, and create linked corrective actions.
 - Corrective actions are managed in the ISMS `Actions` tab as a formal improvement register.
-- Offline timeline progression can activate a bounded number of events when the player returns after enough elapsed time.
+- Offline timeline progression can activate a bounded number of posture-aware events when the player returns after enough elapsed time.
 - Corrective actions must be completed and verified before related active events can be resolved.
 - Readiness scores combine controls and ISMS artifacts across security, documentation, resilience, and audit categories.
 - The simulated audit report samples missing controls, untreated risks, unverified assets, incomplete evidence, and operational consequences from timeline events.

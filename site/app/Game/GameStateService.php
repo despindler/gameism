@@ -26,9 +26,9 @@ final class GameStateService
     {
         $repository = $this->repository();
         $repository->ensureInitialized($user['id']);
-        $repository->advanceTimeline($user['id']);
         $objects = $repository->objects($user['id']);
         $isms = $repository->ismsArtifacts($user['id']);
+        $repository->advanceTimeline($user['id'], $objects, $isms);
         $simulation = $repository->simulationState($user['id']);
         $timeline = $repository->timelineState($user['id']);
         $evaluation = $this->scoring->evaluate($objects, $isms, $simulation);
@@ -212,9 +212,9 @@ final class GameStateService
     {
         $repository = $this->repository();
         $repository->ensureInitialized($user['id']);
-        $repository->advanceTimeline($user['id']);
         $objects = $repository->objects($user['id']);
         $isms = $repository->ismsArtifacts($user['id']);
+        $repository->advanceTimeline($user['id'], $objects, $isms);
         $simulation = $repository->simulationState($user['id']);
         $timeline = $repository->timelineState($user['id']);
         $evaluation = $this->scoring->evaluate($objects, $isms, $simulation);
