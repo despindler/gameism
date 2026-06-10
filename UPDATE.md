@@ -66,6 +66,7 @@ Completed:
 - Milestone 4 is now complete: the event catalog includes richer phishing, lost-device, ransomware, network-outage, cloud-account, and backup-recovery scenarios with catalog-driven impact and active event context in asset modals.
 - Milestone 5 posture-aware offline generation is now complete: elapsed-time events are selected by residual control/evidence risk and carry generation context in the durable timeline event payload.
 - Timeline frequency controls are now available to admins in the Timeline drawer and persist to `app_settings`.
+- Milestone 7 difficulty and guidance controls are now complete: each player can choose Guided, Standard, or Challenge mode, with Timeline always visible and Advisor hidden in Challenge mode.
 
 Partially done:
 
@@ -73,12 +74,12 @@ Partially done:
 
 Not started:
 
-- Milestone 7 difficulty and guidance controls.
+- No roadmap milestone is currently marked not started in this plan.
 
 Recommended next milestone after cleanup:
 
-1. Implement Milestone 7 difficulty and guidance controls.
-2. Continue tuning event selection and impact weights after more playtesting.
+1. Continue tuning event selection and impact weights after more playtesting.
+2. Decide the next product milestone after hands-on playtesting of the current loop.
 
 ## Milestone 1 - Clarify Top-Level Navigation
 

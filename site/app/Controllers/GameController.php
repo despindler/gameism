@@ -135,6 +135,22 @@ final class GameController
     /**
      * @return array<string,mixed>
      */
+    public function updateGuidanceMode(Request $request): array
+    {
+        $user = $this->auth->requireUser();
+
+        return [
+            'ok' => true,
+            'game_state' => $this->game->updateGuidanceMode(
+                $user,
+                $request->string('mode')
+            ),
+        ];
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
     public function runAudit(): array
     {
         $user = $this->auth->requireUser();

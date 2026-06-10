@@ -52,6 +52,20 @@ assertTrue($initial['operations']['ehr_availability_percent'] === 100, 'initial 
 assertTrue($initial['operations']['confidentiality_exposure_percent'] > 0, 'missing security controls create operational exposure');
 assertTrue($initial['settings']['timeline']['offline_event_minutes'] === 120, 'admin game state exposes timeline interval setting');
 assertTrue($initial['settings']['timeline']['max_events_per_advance'] === 1, 'admin game state exposes timeline event cap setting');
+assertTrue($initial['settings']['guidance_mode'] === 'guided', 'initial guidance mode defaults to guided');
+
+$guidanceUpdated = $game->updateGuidanceMode($user, 'challenge');
+assertTrue($guidanceUpdated['settings']['guidance_mode'] === 'challenge', 'player can update guidance mode to challenge');
+$guidanceRestored = $game->updateGuidanceMode($user, 'guided');
+assertTrue($guidanceRestored['settings']['guidance_mode'] === 'guided', 'player can restore guided mode');
+
+$invalidGuidanceRejected = false;
+try {
+    $game->updateGuidanceMode($user, 'expert');
+} catch (ApiException $exception) {
+    $invalidGuidanceRejected = $exception->apiCode() === 'INVALID_GUIDANCE_MODE';
+}
+assertTrue($invalidGuidanceRejected, 'invalid guidance mode is rejected with a stable error code');
 
 $settingsUpdated = $game->updateTimelineSettings($user, [
     'offline_event_minutes' => '60',
@@ -74,6 +88,9 @@ assertTrue($invalidTimelineIntervalRejected, 'invalid timeline interval is rejec
 $playerUser = $auth->register('settings_player', 'strongpass123', 'Settings Player');
 $playerState = $game->stateForUser($playerUser);
 assertTrue($playerState['settings']['timeline'] === null, 'non-admin game state does not expose timeline settings');
+assertTrue($playerState['settings']['guidance_mode'] === 'guided', 'non-admin game state exposes personal guidance mode');
+$playerGuidanceUpdated = $game->updateGuidanceMode($playerUser, 'standard');
+assertTrue($playerGuidanceUpdated['settings']['guidance_mode'] === 'standard', 'non-admin can update personal guidance mode');
 $playerTimelineSettingsRejected = false;
 try {
     $game->updateTimelineSettings($playerUser, [
@@ -274,7 +291,7 @@ echo "OK: smoke tests passed.\n";
 function resetDatabase(PDO $pdo, string $root): void
 {
     $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
-    foreach (['internal_audit_reports', 'corrective_actions', 'timeline_states', 'timeline_events', 'incident_events', 'evidence_items', 'risk_register_items', 'asset_inventory_items', 'audit_reports', 'office_objects', 'player_states', 'app_settings', 'users'] as $table) {
+    foreach (['internal_audit_reports', 'corrective_actions', 'timeline_states', 'timeline_events', 'incident_events', 'user_settings', 'evidence_items', 'risk_register_items', 'asset_inventory_items', 'audit_reports', 'office_objects', 'player_states', 'app_settings', 'users'] as $table) {
         $pdo->exec('DROP TABLE IF EXISTS ' . $table);
     }
     $pdo->exec('SET FOREIGN_KEY_CHECKS=1');

@@ -790,3 +790,42 @@ Next steps:
 
 - Implement difficulty and guidance controls for the Advisor drawer.
 - Continue tuning event selection and impact weights after playtesting.
+
+## Milestone 15 - Difficulty And Guidance Controls
+
+Date: 2026-06-10
+
+Goal: Finish `UPDATE.md` Milestone 7 by letting players choose how much Advisor guidance the simulation exposes.
+
+What changed:
+
+- Added a per-player `user_settings` table for durable player preferences.
+- Added `guidance_mode` to `game_state.settings`.
+- Added `POST /api/update-guidance-mode`.
+- Added server-side validation for `guided`, `standard`, and `challenge` modes.
+- Added a Guidance Mode control in the Timeline drawer so the setting remains reachable even when Advisor is hidden.
+- Kept Timeline visible in every mode.
+- Kept Advisor visible in Guided and Standard modes.
+- Hid the Advisor drawer tab in Challenge mode.
+- Made the Timeline badge include proactive guidance only in Guided mode, so Standard remains quieter while still allowing Advisor access.
+- Updated PHP smoke tests for default mode, persistence, invalid mode rejection, and non-admin access.
+- Updated Playwright coverage for Guided default, Standard mode, Challenge mode, hidden Advisor, and Timeline availability.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- Difficulty currently affects guidance visibility and prominence only; it does not yet alter event frequency, scoring strictness, or audit thresholds.
+- Standard mode keeps the Advisor tab available but removes proactive guidance from the Timeline badge.
+
+Next steps:
+
+- Playtest the current Office, ISMS, Timeline, and Audit loop.
+- Tune event selection and impact weights based on playtesting.
+- Decide the next product milestone after observing the current loop end to end.

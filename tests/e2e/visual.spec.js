@@ -26,6 +26,8 @@ test('authenticated office simulation renders and main workflow works', async ({
   await expect(drawer).toBeVisible();
   await expect(drawer.getByRole('heading', { name: 'Timeline', exact: true })).toBeVisible();
   await expect(drawer.locator('#timeline-summary')).toContainText('active events');
+  await expect(drawer.getByRole('heading', { name: 'Guidance Mode' })).toBeVisible();
+  await expect(drawer.getByLabel('Advisor visibility')).toHaveValue('guided');
   await expect(drawer.getByRole('heading', { name: 'Timeline Settings' })).toBeVisible();
   await drawer.getByLabel('Advance after minutes').fill('90');
   await drawer.getByLabel('Max events per advance').fill('2');
@@ -44,6 +46,16 @@ test('authenticated office simulation renders and main workflow works', async ({
   await expect(guidanceDialog.getByText('Enable controls only when the office could demonstrate')).toBeVisible();
   await guidanceDialog.getByRole('button', { name: 'Done' }).click();
   await expect(guidanceDialog).toBeHidden();
+  await page.getByRole('button', { name: 'Timeline' }).click();
+  await drawer.getByLabel('Advisor visibility').selectOption('standard');
+  await expect(page.getByText('Guidance mode updated.')).toBeVisible();
+  await expect(drawer.getByRole('tab', { name: 'Advisor' })).toBeVisible();
+  await drawer.getByLabel('Advisor visibility').selectOption('challenge');
+  await expect(page.getByText('Guidance mode updated.')).toBeVisible();
+  await expect(drawer.getByRole('tab', { name: 'Advisor' })).toBeHidden();
+  await expect(drawer.getByRole('heading', { name: 'Timeline', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(drawer).toBeHidden();
   await expect(page.locator('#office-canvas')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'ISMS Workbench' })).toBeHidden();
   await expect(page.getByRole('heading', { name: /Nominal|Watch|Disrupted|Closure risk/ })).toBeVisible();

@@ -413,6 +413,30 @@ final class GameStateRepository
         $this->upsertSetting('game.timeline.max_events_per_advance', (string) $maxEventsPerAdvance, 'integer');
     }
 
+    public function guidanceMode(int $userId): string
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT setting_value FROM user_settings WHERE user_id = :user_id AND setting_key = "guidance_mode" LIMIT 1'
+        );
+        $statement->execute(['user_id' => $userId]);
+        $value = $statement->fetchColumn();
+
+        return is_string($value) && in_array($value, ['guided', 'standard', 'challenge'], true) ? $value : 'guided';
+    }
+
+    public function updateGuidanceMode(int $userId, string $mode): void
+    {
+        $statement = $this->pdo->prepare(
+            'INSERT INTO user_settings (user_id, setting_key, setting_value)
+             VALUES (:user_id, "guidance_mode", :setting_value)
+             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = CURRENT_TIMESTAMP'
+        );
+        $statement->execute([
+            'user_id' => $userId,
+            'setting_value' => $mode,
+        ]);
+    }
+
     /**
      * @param list<array<string,mixed>> $objects
      * @param array<string,list<array<string,mixed>>> $isms

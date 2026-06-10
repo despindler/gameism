@@ -57,6 +57,7 @@ final class Application
         $router->add('POST', '/api/resolve-event', fn (Request $request) => $gameController->resolveEvent($request));
         $router->add('POST', '/api/update-corrective-action', fn (Request $request) => $gameController->updateCorrectiveAction($request));
         $router->add('POST', '/api/update-timeline-settings', fn (Request $request) => $gameController->updateTimelineSettings($request));
+        $router->add('POST', '/api/update-guidance-mode', fn (Request $request) => $gameController->updateGuidanceMode($request));
         $router->add('POST', '/api/run-audit', fn () => $gameController->runAudit());
 
         return new self($config, $router);

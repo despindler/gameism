@@ -53,6 +53,7 @@ final class GameStateService
             'timeline' => $timeline,
             'settings' => [
                 'timeline' => $user['role'] === 'admin' ? $repository->timelineSettings() : null,
+                'guidance_mode' => $repository->guidanceMode($user['id']),
             ],
             'operations' => $this->operationalState($objects, $isms, $simulation),
             'score' => $evaluation['score'],
@@ -194,6 +195,25 @@ final class GameStateService
 
         $repository = $this->repository();
         $repository->updateTimelineSettings($offlineEventMinutes, $maxEventsPerAdvance);
+
+        return $this->stateForUser($user);
+    }
+
+    /**
+     * @param array{id:int,username:string,display_name:string,role:string} $user
+     * @return array<string,mixed>
+     */
+    public function updateGuidanceMode(array $user, string $mode): array
+    {
+        $mode = trim($mode);
+
+        if (!in_array($mode, ['guided', 'standard', 'challenge'], true)) {
+            throw new ApiException('INVALID_GUIDANCE_MODE', 400, 'The selected guidance mode is not valid.');
+        }
+
+        $repository = $this->repository();
+        $repository->ensureInitialized($user['id']);
+        $repository->updateGuidanceMode($user['id'], $mode);
 
         return $this->stateForUser($user);
     }

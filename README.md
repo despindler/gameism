@@ -26,7 +26,7 @@ When updating an existing deployment, run the latest `database/schema.sql` and `
 After login, the player configures a small physician office from the floor plan and the ISMS workbench:
 
 - The main application is organized into `Office`, `ISMS`, and `Audit` tabs.
-- A right-side Timeline drawer shows durable simulation events and an Advisor tab with state-driven guidance hints.
+- A right-side Timeline drawer shows durable simulation events, difficulty controls, and an Advisor tab with state-driven guidance hints.
 - An audit-prep stepper shows where the player is in the review workflow.
 - The Office tab shows a schematic physician-office floor plan with rooms, an aisle, doors, furniture, and type-specific device drawings.
 - The Office tab shows current operational function: clinical capacity, EHR availability, data availability, patient delay, exposure, and closure risk.
@@ -41,6 +41,7 @@ After login, the player configures a small physician office from the floor plan 
 - Corrective actions are managed in the ISMS `Actions` tab as a formal improvement register.
 - Offline timeline progression can activate a bounded number of posture-aware events when the player returns after enough elapsed time.
 - Admin users can tune timeline pacing from the Timeline drawer.
+- Each player can choose Guided, Standard, or Challenge mode; Challenge hides Advisor guidance while keeping Timeline visible.
 - Corrective actions must be completed and verified before related active events can be resolved.
 - Readiness scores combine controls and ISMS artifacts across security, documentation, resilience, and audit categories.
 - The simulated audit report samples missing controls, untreated risks, unverified assets, incomplete evidence, and operational consequences from timeline events.

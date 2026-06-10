@@ -41,6 +41,7 @@ function resetDatabase(PDO $pdo, string $root): void
         'timeline_states',
         'timeline_events',
         'incident_events',
+        'user_settings',
         'evidence_items',
         'risk_register_items',
         'asset_inventory_items',

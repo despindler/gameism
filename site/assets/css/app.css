@@ -467,6 +467,7 @@ label {
     margin-top: 12px;
 }
 
+.drawer-settings,
 .timeline-settings {
     display: grid;
     gap: 10px;
@@ -479,12 +480,14 @@ label {
     display: none;
 }
 
+.drawer-settings header h3,
 .timeline-settings header h3 {
     margin: 0;
     font-size: 0.98rem;
     letter-spacing: 0;
 }
 
+.drawer-settings label,
 .timeline-settings label {
     display: grid;
     gap: 5px;
@@ -492,6 +495,7 @@ label {
     color: var(--muted);
 }
 
+.drawer-settings select,
 .timeline-settings input {
     min-height: 36px;
     border: 1px solid var(--line);

@@ -203,6 +203,22 @@
             <section id="drawer-panel-timeline" class="drawer-panel active" role="tabpanel" aria-labelledby="drawer-tab-timeline" data-drawer-panel="timeline">
                 <p id="timeline-summary" class="asset-type"></p>
                 <div id="timeline-list" class="timeline-list"></div>
+                <form id="guidance-mode-form" class="drawer-settings">
+                    <header>
+                        <div>
+                            <p class="eyebrow">Difficulty</p>
+                            <h3>Guidance Mode</h3>
+                        </div>
+                    </header>
+                    <label>
+                        Advisor visibility
+                        <select name="mode">
+                            <option value="guided">Guided</option>
+                            <option value="standard">Standard</option>
+                            <option value="challenge">Challenge</option>
+                        </select>
+                    </label>
+                </form>
                 <form id="timeline-settings-form" class="timeline-settings" hidden>
                     <header>
                         <div>

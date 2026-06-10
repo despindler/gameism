@@ -44,9 +44,11 @@
         drawerTitle: document.getElementById('drawer-title'),
         drawerClose: document.getElementById('drawer-close'),
         drawerTabs: document.getElementById('drawer-tabs'),
+        drawerAdvisorTab: document.getElementById('drawer-tab-advisor'),
         drawerPanels: document.querySelectorAll('[data-drawer-panel]'),
         timelineSummary: document.getElementById('timeline-summary'),
         timelineList: document.getElementById('timeline-list'),
+        guidanceModeForm: document.getElementById('guidance-mode-form'),
         timelineSettingsForm: document.getElementById('timeline-settings-form'),
         logout: document.getElementById('logout'),
         primaryTabs: document.getElementById('primary-tabs'),
@@ -256,6 +258,7 @@
         renderHud();
         renderGuidance();
         renderTimeline();
+        renderGuidanceMode();
         renderTimelineSettings();
         renderDrawerBadge();
         renderOperationsStatus();
@@ -292,6 +295,12 @@
     }
 
     function renderGuidance() {
+        if (guidanceMode() === 'challenge') {
+            els.guidanceSummary.textContent = 'Advisor hidden in Challenge mode';
+            els.guidanceList.innerHTML = '<p class="empty-state">Guidance is hidden. Timeline events and operational status remain available.</p>';
+            return;
+        }
+
         const items = guidanceItems();
         const overall = state.game.score.overall.percent;
         const findingCount = state.game.findings.length;
@@ -341,10 +350,26 @@
         }
     }
 
+    function renderGuidanceMode() {
+        const mode = guidanceMode();
+        els.guidanceModeForm.elements.mode.value = mode;
+        els.drawerAdvisorTab.hidden = mode === 'challenge';
+
+        if (mode === 'challenge' && state.activeDrawerTab === 'advisor') {
+            setDrawerTab('timeline');
+        }
+
+        for (const input of els.guidanceModeForm.querySelectorAll('select')) {
+            input.disabled = state.busy;
+        }
+    }
+
     function renderDrawerBadge() {
         const activeEvents = state.game.timeline.active_count;
         const openActions = state.game.simulation.corrective_actions.filter(isCorrectiveActionOpen).length;
-        const priorityGuidance = guidanceItems().filter((item) => item.tone === 'critical' || item.tone === 'warning').length;
+        const priorityGuidance = guidanceMode() === 'guided'
+            ? guidanceItems().filter((item) => item.tone === 'critical' || item.tone === 'warning').length
+            : 0;
         const badgeCount = activeEvents + openActions + priorityGuidance;
 
         els.drawerBadge.hidden = badgeCount === 0;
@@ -1659,8 +1684,34 @@
         }
     }
 
+    async function updateGuidanceMode(mode) {
+        if (state.busy) {
+            return;
+        }
+
+        state.busy = true;
+        renderGuidanceMode();
+
+        try {
+            const payload = await api('update-guidance-mode', {
+                method: 'POST',
+                body: {
+                    mode,
+                },
+            });
+            state.game = payload.game_state;
+            showToast('Guidance mode updated.');
+        } catch (error) {
+            showToast(error.message);
+        } finally {
+            state.busy = false;
+            render();
+        }
+    }
+
     function setDrawerTab(tabKey) {
-        state.activeDrawerTab = tabKey === 'advisor' ? 'advisor' : 'timeline';
+        const advisorAllowed = guidanceMode() !== 'challenge';
+        state.activeDrawerTab = tabKey === 'advisor' && advisorAllowed ? 'advisor' : 'timeline';
         els.drawerTitle.textContent = state.activeDrawerTab === 'advisor' ? 'Advisor' : 'Timeline';
 
         for (const button of els.drawerTabs.querySelectorAll('[data-drawer-tab]')) {
@@ -2241,6 +2292,12 @@
         }[value] || 'partial';
     }
 
+    function guidanceMode() {
+        return state.game && state.game.settings && state.game.settings.guidance_mode
+            ? state.game.settings.guidance_mode
+            : 'guided';
+    }
+
     function showToast(message) {
         els.toast.textContent = message;
         els.toast.hidden = false;
@@ -2334,6 +2391,10 @@
         }
 
         setDrawerTab(button.dataset.drawerTab);
+    });
+
+    els.guidanceModeForm.addEventListener('change', () => {
+        updateGuidanceMode(els.guidanceModeForm.elements.mode.value);
     });
 
     els.timelineSettingsForm.addEventListener('submit', (event) => {
