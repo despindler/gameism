@@ -903,3 +903,130 @@ Next steps:
 
 - Consider adding an explicit Office Performance formula explanation to the Office Operations panel if playtesting shows players need it.
 - Consider replacing the remaining readiness score strip with a smaller secondary diagnostics row if the top bar still feels crowded.
+
+## UI Phase 10 - Persistent Office Operations Accordion
+
+Date: 2026-06-11
+
+Goal: Make operational state feel like persistent simulation context while keeping the active workspace visually simpler.
+
+What changed:
+
+- Moved Office Operations out of the Office tab into a sticky global chrome below the main navigation.
+- Converted Office Operations into an accordion that collapses to the title and high-level status badge, then expands to the existing operational metrics and active impact rows.
+- Kept the operations accordion visible across Office, ISMS, and Audit views.
+- Renamed the Office floor-plan toolbar eyebrow from `View mode` to `Office Map`.
+- Added stronger visual separation between the light top navigation, darker operations band, and tinted workspace panel headers.
+- Updated Playwright coverage for collapsed and expanded operations states and cross-tab persistence.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- The accordion state is frontend-local and resets on reload; persisted UI preferences were not added for this visual milestone.
+- The existing operational scoring and backend state contracts are unchanged.
+
+Next steps:
+
+- Playtest whether the default collapsed state is enough context or whether severe operational states should auto-expand.
+- Continue evaluating whether the top KPI strip can be reduced now that Office Operations is persistent.
+
+## UI Phase 11 - Annex A-Inspired Office IT Controls
+
+Date: 2026-06-11
+
+Goal: Reduce ISMS workbench complexity by narrowing the player-facing ISMS surface to selected ISO 27001 Annex A-inspired office IT controls.
+
+What changed:
+
+- Renamed the ISMS panel from `ISMS Workbench` to `Office IT Controls`.
+- Replaced the raw `Inventory`, `Risks`, `Evidence`, and `Actions` sub-tabs with `Controls`, `Devices`, and `Follow-up`.
+- Added a default `Controls` workspace that groups device controls, supporting evidence, risk decisions, and event follow-up by operational themes: access and identity, device hardening, backup and recovery, network and cloud services, records handling, and event response.
+- Kept the existing backend ISMS artifact tables and API contracts unchanged; the milestone is a player-facing reframing rather than a schema migration.
+- Routed Advisor evidence and risk prompts to `Controls`, routed inventory prompts to `Devices`, and routed event follow-up to `Follow-up`.
+- Updated the Help guide, README, and Playwright visual coverage to explain the narrowed Annex A-inspired control focus.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- The app intentionally does not expose the full ISO 27001 Annex A catalogue. It uses original scenario text and selected control themes relevant to a small physician office IT simulation.
+- Evidence, risks, and corrective actions still exist as persisted records because scoring, events, and audits use them; they are now presented as support for controls rather than as primary player concepts.
+
+Next steps:
+
+- Consider adding concise Annex A theme labels to each individual device control if playtesting shows users want more direct ISO traceability.
+- Tune audit report copy so it mirrors the same `Controls`, `Devices`, and `Follow-up` language.
+
+## UI Phase 12 - Full-Width Control Accordions
+
+Date: 2026-06-11
+
+Goal: Preserve the simplified Annex A-inspired ISMS overview while reducing the amount of detail visible at once.
+
+What changed:
+
+- Changed the `Controls` workspace from a two-column set of always-open cards to a full-width accordion stack.
+- Kept each collapsed control group focused on the Annex A-inspired focus text, group title, description, readiness pill, and expand/collapse indicator.
+- Moved metrics, office controls, evidence, risk decisions, and linked event follow-up into the expanded accordion body.
+- Updated the Help guide, README, and Playwright visual coverage for the collapsed-first control groups.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- Control group accordion state is frontend-local and resets on reload.
+- Multiple control groups can be expanded at the same time so users can compare related themes when needed.
+
+Next steps:
+
+- Playtest whether one-open-at-a-time behavior would make the Controls workspace feel calmer, or whether comparison is more useful.
+
+## UI Phase 13 - Current-State Help Guide
+
+Date: 2026-06-11
+
+Goal: Make the in-app Help modal describe the current game shape instead of the older layer/component framing.
+
+What changed:
+
+- Reworked Help tabs to `Goal`, `How it works`, `Example`, and `Views`.
+- Clarified that Office Performance is the main target and audits are feedback, not the only goal.
+- Documented the persistent Office Operations accordion, Office Map, Timeline events, Office IT Controls accordions, Devices, Follow-up, audit prep, Advisor, and Settings.
+- Updated the end-to-end example to match the current flow from operations status to device controls, ISMS control groups, event follow-up, and audit feedback.
+- Updated README and Playwright visual coverage for the refreshed Help guide.
+
+How to verify:
+
+- `npm run test:visual`
+- `node --check site/assets/js/app.js`
+- `php tests/run.php`
+- `Get-ChildItem site -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }`
+- `git diff --check`
+
+Known issues and decisions:
+
+- The Help guide remains concise and intentionally avoids becoming an ISO reference manual.
+- Help content is still static frontend copy; no contextual walkthrough state was added.
+
+Next steps:
+
+- Playtest whether first-time players still need a tiny in-view hint on where to start after opening the game.

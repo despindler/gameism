@@ -10,12 +10,14 @@
         transform: null,
         busy: false,
         lastReport: null,
-        activeIsmsTab: 'assets',
+        activeIsmsTab: 'controls',
         activePrimaryTab: 'office',
         activeMapMode: 'overview',
         activeDrawerTab: 'timeline',
         activeHelpTab: 'game',
         activeTimelineMenuKey: null,
+        expandedControlGroups: {},
+        operationsExpanded: false,
         drawerOpen: false,
         drawerOpener: null,
         contextModalOpen: false,
@@ -64,6 +66,8 @@
         mapViewControls: document.getElementById('map-view-controls'),
         tabPanels: document.querySelectorAll('[data-tab-panel]'),
         canvas: document.getElementById('office-canvas'),
+        operationsToggle: document.getElementById('operations-toggle'),
+        operationsDetails: document.getElementById('operations-details'),
         operationsStatusTitle: document.getElementById('operations-status-title'),
         operationsStatusBadge: document.getElementById('operations-status-badge'),
         operationsMetrics: document.getElementById('operations-metrics'),
@@ -169,6 +173,68 @@
             description: 'Highlights open simulated audit findings for each asset.',
         },
     };
+    const officeControlGroups = [
+        {
+            key: 'access',
+            title: 'Access and identity',
+            focus: 'Annex A-inspired focus: access rights, authentication, and account review.',
+            body: 'Keep EHR and admin access trustworthy during phishing or suspicious account activity.',
+            controls: ['mfa_enabled', 'least_privilege', 'access_review', 'admin_password_changed', 'screen_lock'],
+            evidence: ['ehr_access_review'],
+            risks: ['unauthorized_ehr_access'],
+            objects: ['ehr_cloud', 'doctor_pc', 'reception_pc', 'network_router'],
+        },
+        {
+            key: 'devices',
+            title: 'Device hardening and ownership',
+            focus: 'Annex A-inspired focus: asset management and endpoint protection.',
+            body: 'Know which office devices exist, who owns them, and whether they can be trusted after loss or compromise.',
+            controls: ['documented_owner', 'asset_inventory', 'disk_encryption', 'patching_current', 'screen_lock', 'least_privilege'],
+            evidence: ['asset_inventory_export'],
+            risks: ['lost_clinical_endpoint'],
+            objects: ['reception_pc', 'doctor_pc', 'nurse_laptop', 'isms_binder'],
+        },
+        {
+            key: 'backup',
+            title: 'Backup and recovery',
+            focus: 'Annex A-inspired focus: backup, recovery, and disruption readiness.',
+            body: 'Prove patient and practice data can be restored when ransomware or backup failures pressure operations.',
+            controls: ['backup_schedule', 'encrypted_backup', 'restore_test', 'offline_or_immutable_copy'],
+            evidence: ['backup_restore_test'],
+            risks: ['ransomware_recovery_failure'],
+            objects: ['backup_nas', 'isms_binder'],
+        },
+        {
+            key: 'network',
+            title: 'Network and cloud services',
+            focus: 'Annex A-inspired focus: network security and supplier-managed services.',
+            body: 'Keep cloud-dependent workflows available while controlling routers, Wi-Fi, and supplier dependencies.',
+            controls: ['admin_password_changed', 'firmware_current', 'guest_network_isolated', 'wifi_encryption', 'supplier_reviewed', 'contract_dpa', 'backup_export_plan'],
+            evidence: ['supplier_review_ehr'],
+            risks: ['network_misconfiguration'],
+            objects: ['network_router', 'ehr_cloud'],
+        },
+        {
+            key: 'records',
+            title: 'Records and physical handling',
+            focus: 'Annex A-inspired focus: physical security, records, and disposal.',
+            body: 'Reduce exposure from printouts, records cabinets, disposal points, and unattended paper workflows.',
+            controls: ['secure_print', 'located_supervised', 'disposal_procedure', 'physical_lock', 'retention_policy', 'access_list', 'clean_desk'],
+            evidence: [],
+            risks: ['exposed_printouts'],
+            objects: ['printer', 'records_cabinet', 'shred_console'],
+        },
+        {
+            key: 'response',
+            title: 'Event response and improvement',
+            focus: 'Annex A-inspired focus: incident response, evidence, audit, and continual improvement.',
+            body: 'Use timeline events to create follow-up work, prove effectiveness, and keep operations improving.',
+            controls: ['incident_procedure', 'risk_register', 'soa_prepared', 'internal_audit_plan', 'management_review_record'],
+            evidence: ['incident_procedure_record', 'risk_register_review', 'statement_of_applicability', 'internal_audit_record'],
+            risks: ['audit_evidence_gap'],
+            objects: ['isms_binder'],
+        },
+    ];
     const floorPlanPadding = 20;
 
     async function api(path, options = {}) {
@@ -430,9 +496,16 @@
             ['Closure risk', `${operations.closure_risk_percent}%`],
         ];
 
-        els.operationsStatusTitle.textContent = operationalStatusLabel(operations.status);
+        const status = operationalStatusLabel(operations.status);
+        els.operationsStatusTitle.textContent = 'Office Operations';
         els.operationsStatusBadge.textContent = operationalStatusLabel(operations.status);
         els.operationsStatusBadge.className = `status-badge ${statusClass(operations.status)}`;
+        els.operationsToggle.setAttribute('aria-expanded', state.operationsExpanded ? 'true' : 'false');
+        els.operationsToggle.setAttribute(
+            'aria-label',
+            `${state.operationsExpanded ? 'Collapse' : 'Expand'} Office Operations details. Current status: ${status}.`
+        );
+        els.operationsDetails.hidden = !state.operationsExpanded;
         els.operationsMetrics.innerHTML = metrics.map(([label, value]) => `
             <article class="operations-metric">
                 <span>${escapeHtml(label)}</span>
@@ -475,11 +548,11 @@
         if (missingEvidence.length > 0) {
             items.push({
                 tone: 'critical',
-                title: 'Prepare audit evidence',
-                body: `${missingEvidence.length} evidence records are missing or still draft. Start with ${missingEvidence[0].title}.`,
+                title: 'Prove the office controls',
+                body: `${missingEvidence.length} evidence records are missing or still draft. Open Controls and start with ${missingEvidence[0].title}.`,
                 action: 'open-evidence',
-                buttonText: 'Evidence',
-                buttonLabel: 'Open evidence workbench',
+                buttonText: 'Controls',
+                buttonLabel: 'Open office IT controls',
             });
         }
 
@@ -487,11 +560,11 @@
         if (untreatedRisks.length > 0) {
             items.push({
                 tone: 'warning',
-                title: 'Treat open risks',
-                body: `${untreatedRisks.length} risks still need assessment, treatment, or acceptance decisions.`,
+                title: 'Decide control risks',
+                body: `${untreatedRisks.length} office IT risks still need assessment, treatment, or acceptance decisions.`,
                 action: 'open-risks',
-                buttonText: 'Risks',
-                buttonLabel: 'Open risk register',
+                buttonText: 'Controls',
+                buttonLabel: 'Open office IT controls',
             });
         }
 
@@ -499,11 +572,11 @@
         if (openActions.length > 0) {
             items.push({
                 tone: 'warning',
-                title: 'Close corrective actions',
-                body: `${openActions.length} corrective actions still need completion or effectiveness checks.`,
+                title: 'Close event follow-up',
+                body: `${openActions.length} follow-up items still need completion or effectiveness checks.`,
                 action: 'open-actions',
-                buttonText: 'Actions',
-                buttonLabel: 'Open corrective actions',
+                buttonText: 'Follow-up',
+                buttonLabel: 'Open event follow-up',
             });
         }
 
@@ -538,7 +611,7 @@
                 title: auditReady ? 'Try the audit' : 'Prepare before audit',
                 body: auditReady
                     ? 'Readiness is high enough to attempt a simulated audit.'
-                    : 'Use the office findings, risks, evidence, and corrective actions to improve readiness.',
+                    : 'Use office findings, control evidence, risk decisions, and event follow-up to improve readiness.',
                 action: auditReady ? 'open-audit' : 'open-event',
                 target: availableEvent ? availableEvent.event_key : '',
                 buttonText: auditReady ? 'Audit' : 'Event',
@@ -1314,7 +1387,7 @@
             <div class="asset-header">
                 <div>
                     <p class="asset-type">${escapeHtml(typeLabel(object.object_type))}</p>
-                    <p class="control-description">${escapeHtml(object.display_name)} is linked to technical controls, ISMS evidence, risk treatment, and corrective actions.</p>
+                    <p class="control-description">${escapeHtml(object.display_name)} is linked to technical controls, evidence, risk decisions, and event follow-up.</p>
                 </div>
                 <span class="status-badge ${escapeAttr(object.state)}">${escapeHtml(stateLabel(object.state))}</span>
             </div>
@@ -1335,7 +1408,7 @@
                 title: item.title,
                 meta: `${item.status} - ${item.owner}`,
             })))}
-            ${linkedSection('Corrective actions', actions.map((action) => ({
+            ${linkedSection('Event follow-up', actions.map((action) => ({
                 title: action.title,
                 meta: `${action.status} - ${action.verification_status}`,
             })))}
@@ -1442,14 +1515,14 @@
                     meta: evidence ? `${evidence.status} - ${evidence.owner}` : 'Not in evidence checklist',
                 };
             }))}
-            ${linkedAction ? linkedSection('Linked corrective action', [{
+            ${linkedAction ? linkedSection('Linked follow-up', [{
                 title: linkedAction.title,
                 meta: `${linkedAction.status} - ${linkedAction.verification_status}`,
             }]) : ''}
         `;
 
         const actionButton = linkedAction
-            ? `<button type="button" data-event-action="open-action" data-event-key="${escapeAttr(event.event_key)}">Open action</button>`
+            ? `<button type="button" data-event-action="open-action" data-event-key="${escapeAttr(event.event_key)}">Open follow-up</button>`
             : '';
         const eventButton = event.status === 'available'
             ? `<button type="button" data-event-action="start" data-event-key="${escapeAttr(event.event_key)}" ${state.busy ? 'disabled' : ''}>Start event</button>`
@@ -1468,10 +1541,10 @@
 
     function renderHelpModal() {
         const tabs = [
-            ['game', 'Game'],
-            ['layers', 'Layers'],
+            ['game', 'Goal'],
+            ['flow', 'How it works'],
             ['example', 'Example'],
-            ['components', 'Components'],
+            ['views', 'Views'],
         ];
         const activeTab = tabs.some(([key]) => key === state.activeHelpTab) ? state.activeHelpTab : 'game';
         state.activeHelpTab = activeTab;
@@ -1494,17 +1567,17 @@
     }
 
     function helpContent(tab) {
-        if (tab === 'layers') {
+        if (tab === 'flow') {
             return `
                 <section class="help-section">
-                    <h3>The six layers</h3>
+                    <h3>How the game works</h3>
                     <ol class="help-list">
-                        <li><strong>Office Operations:</strong> The success layer. Clinical capacity, EHR availability, data availability, delay, exposure, and closure risk show whether the practice can work.</li>
-                        <li><strong>Device configuration:</strong> The hands-on layer. Click devices on the floor plan and enable controls only when they are actually implemented.</li>
-                        <li><strong>Event and threat layer:</strong> The pressure layer. Timeline events stress weak controls and show what breaks when resilience is missing.</li>
-                        <li><strong>ISMS officer layer:</strong> The management-system layer. Inventory, risks, evidence, and actions make resilience visible, owned, and auditable.</li>
-                        <li><strong>Audit and feedback layer:</strong> The diagnostic layer. The audit samples controls, evidence, risks, actions, and event history to show what to improve next.</li>
-                        <li><strong>Learning layer:</strong> The reason layer. The game teaches ISO 27001 thinking through operational consequences, not through memorizing clauses.</li>
+                        <li><strong>Office Performance is the target:</strong> The Office KPI and Office Operations band show whether the practice can still treat patients, reach the EHR, access data, and avoid closure risk.</li>
+                        <li><strong>Office Map is the hands-on layer:</strong> Click visible devices, inspect their profile, and configure controls only when the office could realistically demonstrate they are implemented.</li>
+                        <li><strong>Timeline events apply pressure:</strong> Events such as phishing, ransomware, lost devices, network outage, and backup failure expose weak controls through operational consequences.</li>
+                        <li><strong>Office IT Controls explain the ISMS work:</strong> The Controls accordions group selected Annex A-inspired themes and connect device controls, evidence, risk decisions, and event follow-up.</li>
+                        <li><strong>Follow-up closes the loop:</strong> Event response work must be completed and verified as effective before related active events can be resolved.</li>
+                        <li><strong>Audit is feedback:</strong> The audit samples the current setup, event history, evidence, risk decisions, and follow-up to show the next improvement target.</li>
                     </ol>
                 </section>
             `;
@@ -1515,34 +1588,36 @@
                 <section class="help-section">
                     <h3>End-to-end example</h3>
                     <ol class="help-list">
-                        <li>You start in the Office view and notice Office Performance is below the ideal target or that readiness is weak.</li>
-                        <li>You click the Cloud EHR or Backup NAS on the floor plan and inspect the device profile. Missing controls and linked findings explain the technical gap.</li>
-                        <li>You configure the relevant controls, such as MFA, backup schedule, restore testing, or least privilege, when the setup would really support them.</li>
-                        <li>You open ISMS and verify inventory ownership, treat related risks, and prepare evidence such as backup restore records or access review notes.</li>
-                        <li>A Timeline event, for example ransomware or suspicious cloud-account activity, becomes active. The Office Operations panel shows whether capacity, data, delay, or closure risk changed.</li>
-                        <li>You open the event, review required controls and evidence, then use the linked corrective action in ISMS Actions to record and verify the response.</li>
-                        <li>After the corrective action is verified as effective, you resolve the event and confirm Office Performance recovers.</li>
-                        <li>You run an Audit. The report samples what happened, points out remaining gaps, and gives the next improvement targets.</li>
+                        <li>Start in the Office view and check the Office KPI plus the collapsed Office Operations status badge.</li>
+                        <li>Expand Office Operations if the status is not nominal, then inspect the affected device or a critical device such as Cloud EHR, Backup NAS, Reception PC, or Network Router.</li>
+                        <li>Open the device profile from the Office Map and configure relevant controls, such as MFA, restore testing, patching, least privilege, or guest network isolation.</li>
+                        <li>Open ISMS, choose Controls, and expand the matching focus group to see how device controls connect to evidence, risk decisions, and follow-up.</li>
+                        <li>Use Devices when ownership or asset status is the problem, and use Follow-up when a Timeline event created response work.</li>
+                        <li>Open or start a Timeline event, review its operational context, required controls, and required evidence, then complete and verify the linked follow-up.</li>
+                        <li>Resolve the event after the follow-up is effective and confirm Office Performance and Office Operations recover.</li>
+                        <li>Run an Audit to get structured feedback on the remaining gaps and choose the next weak point to improve.</li>
                     </ol>
                 </section>
             `;
         }
 
-        if (tab === 'components') {
+        if (tab === 'views') {
             return `
                 <section class="help-section">
-                    <h3>Components</h3>
+                    <h3>Views and controls</h3>
                     <div class="help-grid">
                         <article><h4>Top KPIs</h4><p>Office is the main performance target. Readiness, Security, Resilience, and Audit are supporting diagnostics that explain why performance may be fragile.</p></article>
-                        <article><h4>Office Operations</h4><p>Shows the current operational state: clinical capacity, EHR availability, data availability, patient delay, exposure, and closure risk.</p></article>
-                        <article><h4>Floor Plan</h4><p>The primary work surface. Click visible office devices to inspect findings, risks, evidence, controls, actions, and active event context.</p></article>
-                        <article><h4>View Modes</h4><p>Overview shows the office layout. Readiness, Evidence, Risk, and Audit overlays show different concerns directly on the map.</p></article>
+                        <article><h4>Office Operations</h4><p>The persistent accordion below the navigation. Collapsed, it shows the current operations badge; expanded, it shows capacity, EHR availability, data availability, delay, exposure, closure risk, and active impact rows.</p></article>
+                        <article><h4>Office Map</h4><p>The primary work surface. Click visible office devices to inspect findings, controls, linked support, and active event context.</p></article>
+                        <article><h4>Map overlays</h4><p>Overview shows the office layout. Readiness, Evidence, Risk, and Audit overlays show different concerns directly on the map.</p></article>
                         <article><h4>Timeline</h4><p>Shows simulation events. Open an event for details, or use the three-dot menu to start an event or jump to the affected asset.</p></article>
-                        <article><h4>ISMS Workbench</h4><p>The information-security officer surface. It organizes Inventory, Risks, Evidence, and Actions as the management-system support for resilience.</p></article>
-                        <article><h4>Inventory</h4><p>Records assets, owners, classification, criticality, and verification status. Verified inventory improves documentation and audit readiness.</p></article>
-                        <article><h4>Risks</h4><p>Tracks likelihood, impact, owners, and treatment decisions. Treat or accept risks to reduce resilience and audit gaps.</p></article>
-                        <article><h4>Evidence</h4><p>Shows what proof should exist for controls and processes. Ready or reviewed evidence helps audits and event response.</p></article>
-                        <article><h4>Actions</h4><p>Tracks corrective actions created by events or findings. Actions must be completed and verified as effective before related events can be resolved.</p></article>
+                        <article><h4>Advisor</h4><p>Suggests next useful actions in Guided and Standard modes. Challenge mode hides Advisor hints while leaving Timeline available.</p></article>
+                        <article><h4>Settings</h4><p>Lets admin users tune Timeline pacing and lets each player choose Guided, Standard, or Challenge mode.</p></article>
+                        <article><h4>Office IT Controls</h4><p>The information-security officer surface. It narrows ISO 27001 Annex A thinking to selected controls that support office IT operations.</p></article>
+                        <article><h4>Controls</h4><p>Shows full-width accordion groups. Each collapsed group summarizes an office IT control theme, then expands to device controls, evidence, risk decisions, and follow-up.</p></article>
+                        <article><h4>Devices</h4><p>Records owners, classification, criticality, and verification status for the assets used in the simulation.</p></article>
+                        <article><h4>Follow-up</h4><p>Tracks event response work. Follow-up must be completed and verified as effective before related events can be resolved.</p></article>
+                        <article><h4>Audit prep</h4><p>Shows the review gate: control evidence, risk decisions, readiness, and certification check.</p></article>
                         <article><h4>Audit</h4><p>Runs a simulated audit report. Use it as feedback, not as the only goal: audit findings tell you how to improve office resilience.</p></article>
                     </div>
                 </section>
@@ -1551,19 +1626,19 @@
 
         return `
             <section class="help-section">
-                <h3>Purpose and core idea</h3>
-                <p>ISMS Office is a small office IT-resilience simulation. You act as the system administrator responsible for keeping a physician practice functioning while security and operational events threaten the setup.</p>
-                <p>The goal is not only to pass an audit. The goal is to maintain full Office Performance. ISO 27001-style controls, risks, evidence, corrective actions, and audits are the professional tools you use to keep the office working.</p>
-                <h3>What you are expected to do</h3>
+                <h3>Goal</h3>
+                <p>ISMS Office is a small office IT-resilience simulation. You are responsible for keeping a physician practice functioning while security and operational events threaten the setup.</p>
+                <p>The goal is to maintain Office Performance, not merely to pass an audit. Selected ISO 27001 Annex A-inspired controls, evidence, risk decisions, follow-up, and audits are the professional tools you use to keep the office working.</p>
+                <h3>What counts as progress</h3>
                 <ul class="help-list">
-                    <li>Use the floor plan to inspect devices and configure appropriate controls.</li>
-                    <li>Watch Office Performance and Office Operations to see whether the practice can still operate.</li>
-                    <li>Use Timeline events to test the setup against realistic threats.</li>
-                    <li>Use ISMS Inventory, Risks, Evidence, and Actions to make the setup auditable and resilient.</li>
-                    <li>Run audits to get structured feedback and find the next weakest point.</li>
+                    <li>Office Performance stays high even when Timeline events occur.</li>
+                    <li>Critical office IT devices have realistic controls configured.</li>
+                    <li>Controls have supporting evidence and risk decisions where the simulation asks for them.</li>
+                    <li>Event follow-up is completed and verified as effective.</li>
+                    <li>Audits produce fewer and less severe findings over time.</li>
                 </ul>
                 <h3>First five minutes</h3>
-                <p>Start with a critical device, enable real controls, prepare matching evidence, then trigger or inspect a Timeline event to see how the office reacts. Keep improving until Office Performance stays at 100% even when events occur.</p>
+                <p>Start with Office Operations and the Office Map. Inspect a critical device, configure real controls, expand the matching ISMS Controls group, then open a Timeline event to see how the office reacts. Keep improving until Office Performance stays stable even under pressure.</p>
             </section>
         `;
     }
@@ -1681,29 +1756,251 @@
 
     function renderIsmsPanel() {
         const artifacts = state.game.isms;
-        const scores = state.game.score.artifacts;
         const openActions = state.game.simulation.corrective_actions.filter(isCorrectiveActionOpen).length;
-        els.ismsScoreSummary.textContent = `Inventory ${scores.assets.percent}% - Risks ${scores.risks.percent}% - Evidence ${scores.evidence.percent}% - Actions ${openActions} open`;
+        const groupsReady = officeControlGroups.filter((group) => controlGroupReadiness(group).percent >= 80).length;
+        const validTabs = ['controls', 'devices', 'followup'];
+
+        if (!validTabs.includes(state.activeIsmsTab)) {
+            state.activeIsmsTab = 'controls';
+        }
+
+        els.ismsScoreSummary.textContent = `Selected Annex A practice for office IT - ${groupsReady}/${officeControlGroups.length} control groups stable - ${openActions} follow-up open`;
 
         for (const button of els.ismsTabs.querySelectorAll('[data-isms-tab]')) {
             button.classList.toggle('active', button.dataset.ismsTab === state.activeIsmsTab);
         }
 
-        if (state.activeIsmsTab === 'assets') {
-            els.ismsBody.innerHTML = artifacts.assets.map(renderAssetArtifact).join('');
-        } else if (state.activeIsmsTab === 'risks') {
-            els.ismsBody.innerHTML = artifacts.risks.map(renderRiskArtifact).join('');
-        } else if (state.activeIsmsTab === 'evidence') {
-            els.ismsBody.innerHTML = artifacts.evidence.map(renderEvidenceArtifact).join('');
+        els.ismsBody.className = `isms-body ${state.activeIsmsTab === 'controls' ? 'control-groups' : ''}`;
+
+        if (state.activeIsmsTab === 'controls') {
+            els.ismsBody.innerHTML = renderControlWorkspace();
+        } else if (state.activeIsmsTab === 'devices') {
+            els.ismsBody.innerHTML = `
+                ${renderIsmsOverview('Device register', 'Keep the supporting office IT inventory small and useful: owner, criticality, and verification status for each asset that appears in the simulation.')}
+                ${artifacts.assets.map(renderAssetArtifact).join('')}
+            `;
         } else {
             const actions = state.game.simulation.corrective_actions;
-            els.ismsBody.innerHTML = actions.length
-                ? actions.map(renderCorrectiveActionCard).join('')
-                : '<p class="empty-state">No corrective actions have been opened.</p>';
+            els.ismsBody.innerHTML = `
+                ${renderIsmsOverview('Event follow-up', 'Timeline events create follow-up items. Complete the work and verify effectiveness before resolving the related event.')}
+                ${actions.length
+                    ? actions.map(renderCorrectiveActionCard).join('')
+                    : '<p class="empty-state">No event follow-up has been opened.</p>'}
+            `;
         }
 
         bindIsmsControls();
+        bindControlGroupToggles();
         bindCorrectiveActionControls(els.ismsBody);
+    }
+
+    function renderIsmsOverview(title, body) {
+        return `
+            <section class="isms-overview wide">
+                <h3>${escapeHtml(title)}</h3>
+                <p>${escapeHtml(body)}</p>
+            </section>
+        `;
+    }
+
+    function renderControlWorkspace() {
+        return `
+            ${renderIsmsOverview(
+                'Office IT control focus',
+                'This is not a full ISO 27001 catalogue. It narrows the simulation to selected Annex A-inspired controls that improve office IT resilience, make timeline events easier to handle, and give auditors usable evidence.'
+            )}
+            ${officeControlGroups.map(renderControlGroup).join('')}
+        `;
+    }
+
+    function renderControlGroup(group) {
+        const readiness = controlGroupReadiness(group);
+        const controlRows = controlRowsForGroup(group);
+        const evidence = evidenceForGroup(group);
+        const risks = risksForGroup(group);
+        const actions = actionsForGroup(group);
+        const readyEvidence = evidence.filter((item) => !isEvidenceIncomplete(item)).length;
+        const treatedRisks = risks.filter((item) => !isRiskUntreated(item)).length;
+        const isExpanded = state.expandedControlGroups[group.key] === true;
+        const detailsId = `control-group-details-${group.key}`;
+
+        return `
+            <article class="control-group-card ${isExpanded ? 'expanded' : ''}">
+                <header class="control-group-header">
+                    <span class="control-group-summary">
+                        <span class="control-group-focus">${escapeHtml(group.focus)}</span>
+                        <h3>${escapeHtml(group.title)}</h3>
+                        <p>${escapeHtml(group.body)}</p>
+                    </span>
+                    <span class="status-badge ${escapeAttr(scoreStatusClass(readiness.percent))}">${readiness.percent}%</span>
+                    <button class="control-group-toggle" type="button" data-control-group-toggle="${escapeAttr(group.key)}" aria-expanded="${isExpanded ? 'true' : 'false'}" aria-controls="${escapeAttr(detailsId)}" aria-label="${isExpanded ? 'Collapse' : 'Expand'} ${escapeAttr(group.title)}">
+                        <span class="control-group-chevron" aria-hidden="true">${isExpanded ? '-' : '+'}</span>
+                    </button>
+                </header>
+                <div id="${escapeAttr(detailsId)}" class="control-group-details" ${isExpanded ? '' : 'hidden'}>
+                    <div class="control-group-metrics">
+                        <div><span>Controls</span><strong>${readiness.implemented}/${readiness.total}</strong></div>
+                        <div><span>Evidence</span><strong>${countLabel(readyEvidence, evidence.length)}</strong></div>
+                        <div><span>Risks</span><strong>${countLabel(treatedRisks, risks.length)}</strong></div>
+                        <div><span>Follow-up</span><strong>${actions.filter(isCorrectiveActionOpen).length}</strong></div>
+                    </div>
+                    <section class="control-support-section">
+                        <h4>Office controls</h4>
+                        <div class="annex-control-list">
+                            ${controlRows.map(renderControlStatusRow).join('')}
+                        </div>
+                    </section>
+                    <section class="control-support-section">
+                        <h4>Evidence that proves the controls</h4>
+                        ${evidence.length
+                            ? evidence.map(renderControlEvidenceItem).join('')
+                            : '<p class="empty-state">No separate evidence item is modeled for this group yet.</p>'}
+                    </section>
+                    <section class="control-support-section">
+                        <h4>Risk decisions</h4>
+                        ${risks.length
+                            ? risks.map(renderControlRiskItem).join('')
+                            : '<p class="empty-state">No separate risk row is modeled for this group yet.</p>'}
+                    </section>
+                    ${actions.length ? `
+                        <section class="control-support-section">
+                            <h4>Event follow-up linked to this group</h4>
+                            <div class="control-action-list">
+                                ${actions.map((action) => `
+                                    <article class="support-item compact">
+                                        <strong>${escapeHtml(action.title)}</strong>
+                                        <span>${escapeHtml(statusLabel(action.status))} - ${escapeHtml(shortObjectName(action.object_key))}</span>
+                                    </article>
+                                `).join('')}
+                            </div>
+                        </section>
+                    ` : ''}
+                </div>
+            </article>
+        `;
+    }
+
+    function controlRowsForGroup(group) {
+        return group.controls.map((controlKey) => {
+            const instances = state.game.map.objects.flatMap((object) => object.controls
+                .filter((control) => control.key === controlKey)
+                .map((control) => ({
+                    ...control,
+                    objectName: object.display_name,
+                    objectKey: object.object_key,
+                })));
+
+            return {
+                key: controlKey,
+                label: instances[0] ? instances[0].label : controlLabel(controlKey),
+                description: instances[0] ? instances[0].description : '',
+                enabled: instances.filter((control) => control.enabled).length,
+                total: instances.length,
+                objects: instances.map((control) => control.objectName),
+            };
+        }).filter((row) => row.total > 0);
+    }
+
+    function controlGroupReadiness(group) {
+        const rows = controlRowsForGroup(group);
+        const implemented = rows.reduce((sum, row) => sum + row.enabled, 0);
+        const total = rows.reduce((sum, row) => sum + row.total, 0);
+
+        return {
+            implemented,
+            total,
+            percent: total > 0 ? Math.round((implemented / total) * 100) : 100,
+        };
+    }
+
+    function evidenceForGroup(group) {
+        return state.game.isms.evidence.filter((item) => group.evidence.includes(item.evidence_key));
+    }
+
+    function risksForGroup(group) {
+        return state.game.isms.risks.filter((item) => group.risks.includes(item.risk_key));
+    }
+
+    function actionsForGroup(group) {
+        return state.game.simulation.corrective_actions.filter((action) => group.objects.includes(action.object_key));
+    }
+
+    function renderControlStatusRow(row) {
+        return `
+            <article class="annex-control-row ${row.enabled === row.total ? 'ready' : 'open'}">
+                <div>
+                    <strong>${escapeHtml(row.label)}</strong>
+                    <span>${escapeHtml(row.description)}</span>
+                    <small>${escapeHtml(row.objects.join(', '))}</small>
+                </div>
+                <span>${row.enabled}/${row.total}</span>
+            </article>
+        `;
+    }
+
+    function renderControlEvidenceItem(evidence) {
+        return `
+            <article class="support-item">
+                <header>
+                    <div>
+                        <strong>${escapeHtml(evidence.title)}</strong>
+                        <span>${escapeHtml(typeLabel(evidence.evidence_type))} - ${escapeHtml(shortObjectName(evidence.object_key))}</span>
+                    </div>
+                    <span class="status-badge ${escapeAttr(statusClass(evidence.status))}">${escapeHtml(statusLabel(evidence.status))}</span>
+                </header>
+                <p class="control-description">${escapeHtml(evidence.expected_evidence)}</p>
+                <div class="artifact-grid">
+                    ${selectControl('evidence', evidence.evidence_key, 'status', evidence.status, [
+                        ['missing', 'Missing'],
+                        ['draft', 'Draft'],
+                        ['ready', 'Ready'],
+                        ['reviewed', 'Reviewed'],
+                    ])}
+                    ${textInputControl('evidence', evidence.evidence_key, 'owner', evidence.owner, 'Owner')}
+                    ${textareaControl('evidence', evidence.evidence_key, 'notes', evidence.notes, 'Notes', 'wide')}
+                </div>
+            </article>
+        `;
+    }
+
+    function renderControlRiskItem(risk) {
+        return `
+            <article class="support-item">
+                <header>
+                    <div>
+                        <strong>${escapeHtml(risk.title)}</strong>
+                        <span>Inherent score ${risk.inherent_score} - ${escapeHtml(shortObjectName(risk.object_key))}</span>
+                    </div>
+                    <span class="status-badge ${escapeAttr(statusClass(risk.treatment_status))}">${escapeHtml(statusLabel(risk.treatment_status))}</span>
+                </header>
+                <div class="artifact-grid">
+                    ${selectControl('risk', risk.risk_key, 'treatment_status', risk.treatment_status, [
+                        ['identified', 'Identified'],
+                        ['assessed', 'Assessed'],
+                        ['treated', 'Treated'],
+                        ['accepted', 'Accepted'],
+                    ], 'wide')}
+                    ${textInputControl('risk', risk.risk_key, 'owner', risk.owner, 'Owner')}
+                    ${textareaControl('risk', risk.risk_key, 'treatment_summary', risk.treatment_summary, 'Treatment summary', 'wide')}
+                </div>
+            </article>
+        `;
+    }
+
+    function scoreStatusClass(percent) {
+        if (percent >= 80) {
+            return 'ready';
+        }
+
+        if (percent >= 40) {
+            return 'partial';
+        }
+
+        return 'needs_attention';
+    }
+
+    function countLabel(done, total) {
+        return total > 0 ? `${done}/${total}` : 'n/a';
     }
 
     function renderAssetArtifact(asset) {
@@ -1725,51 +2022,6 @@
                     ])}
                     ${textInputControl('asset', asset.asset_key, 'owner', asset.owner, 'Owner', 'wide')}
                     ${textareaControl('asset', asset.asset_key, 'notes', asset.notes, 'Notes', 'wide')}
-                </div>
-            </article>
-        `;
-    }
-
-    function renderRiskArtifact(risk) {
-        return `
-            <article class="artifact-card">
-                <header>
-                    <h3>${escapeHtml(risk.title)}</h3>
-                    <div class="artifact-meta">Inherent score ${risk.inherent_score} - linked to ${escapeHtml(shortObjectName(risk.object_key))}</div>
-                </header>
-                <div class="artifact-grid">
-                    ${selectControl('risk', risk.risk_key, 'likelihood', String(risk.likelihood), scoreOptions())}
-                    ${selectControl('risk', risk.risk_key, 'impact', String(risk.impact), scoreOptions())}
-                    ${selectControl('risk', risk.risk_key, 'treatment_status', risk.treatment_status, [
-                        ['identified', 'Identified'],
-                        ['assessed', 'Assessed'],
-                        ['treated', 'Treated'],
-                        ['accepted', 'Accepted'],
-                    ], 'wide')}
-                    ${textInputControl('risk', risk.risk_key, 'owner', risk.owner, 'Owner', 'wide')}
-                    ${textareaControl('risk', risk.risk_key, 'treatment_summary', risk.treatment_summary, 'Treatment summary', 'wide')}
-                </div>
-            </article>
-        `;
-    }
-
-    function renderEvidenceArtifact(evidence) {
-        return `
-            <article class="artifact-card">
-                <header>
-                    <h3>${escapeHtml(evidence.title)}</h3>
-                    <div class="artifact-meta">${escapeHtml(typeLabel(evidence.evidence_type))} - linked to ${escapeHtml(shortObjectName(evidence.object_key))}</div>
-                </header>
-                <p class="control-description">${escapeHtml(evidence.expected_evidence)}</p>
-                <div class="artifact-grid">
-                    ${selectControl('evidence', evidence.evidence_key, 'status', evidence.status, [
-                        ['missing', 'Missing'],
-                        ['draft', 'Draft'],
-                        ['ready', 'Ready'],
-                        ['reviewed', 'Reviewed'],
-                    ], 'wide')}
-                    ${textInputControl('evidence', evidence.evidence_key, 'owner', evidence.owner, 'Owner', 'wide')}
-                    ${textareaControl('evidence', evidence.evidence_key, 'notes', evidence.notes, 'Notes', 'wide')}
                 </div>
             </article>
         `;
@@ -1808,16 +2060,6 @@
         `;
     }
 
-    function scoreOptions() {
-        return [
-            ['1', '1'],
-            ['2', '2'],
-            ['3', '3'],
-            ['4', '4'],
-            ['5', '5'],
-        ];
-    }
-
     function bindIsmsControls() {
         for (const select of els.ismsBody.querySelectorAll('select[data-isms-type]')) {
             select.addEventListener('change', () => {
@@ -1836,6 +2078,16 @@
                 if (event.key === 'Enter' && input.tagName === 'INPUT') {
                     input.blur();
                 }
+            });
+        }
+    }
+
+    function bindControlGroupToggles() {
+        for (const button of els.ismsBody.querySelectorAll('[data-control-group-toggle]')) {
+            button.addEventListener('click', () => {
+                const groupKey = button.dataset.controlGroupToggle;
+                state.expandedControlGroups[groupKey] = state.expandedControlGroups[groupKey] !== true;
+                renderIsmsPanel();
             });
         }
     }
@@ -2036,24 +2288,24 @@
 
         return markCurrentStep([
             {
-                title: 'Evidence pack',
+                title: 'Control evidence',
                 detail: evidenceReady
-                    ? 'Evidence checklist is audit-ready.'
+                    ? 'Control evidence is audit-ready.'
                     : `${evidenceIncomplete} evidence items still need ready or reviewed status.`,
                 done: evidenceReady,
             },
             {
-                title: 'Risk treatment',
+                title: 'Risk decisions',
                 detail: risksReady
-                    ? 'Risk register treatments are ready for auditor review.'
+                    ? 'Risk decisions are ready for auditor review.'
                     : `${untreatedRisks} risks still need treatment or acceptance.`,
                 done: risksReady,
             },
             {
                 title: 'Readiness gate',
                 detail: readinessReady
-                    ? `${state.game.score.overall.percent}% readiness with corrective actions closed.`
-                    : `${state.game.score.overall.percent}% readiness and ${openActions} open corrective actions.`,
+                    ? `${state.game.score.overall.percent}% readiness with event follow-up closed.`
+                    : `${state.game.score.overall.percent}% readiness and ${openActions} open follow-up items.`,
                 done: readinessReady,
             },
             {
@@ -2246,7 +2498,7 @@
                 },
             });
             state.game = payload.game_state;
-            showToast('Corrective action updated.');
+            showToast('Follow-up updated.');
         } catch (error) {
             showToast(error.message);
         } finally {
@@ -2314,7 +2566,7 @@
     function openCorrectiveActions(eventKey = '') {
         closeDrawer();
         closeContextModal();
-        state.activeIsmsTab = 'actions';
+        state.activeIsmsTab = 'followup';
         setPrimaryTab('isms');
         renderIsmsPanel();
 
@@ -2405,7 +2657,7 @@
 
         if (action === 'open-evidence') {
             closeDrawer();
-            state.activeIsmsTab = 'evidence';
+            state.activeIsmsTab = 'controls';
             setPrimaryTab('isms');
             renderIsmsPanel();
             return;
@@ -2413,7 +2665,7 @@
 
         if (action === 'open-risks') {
             closeDrawer();
-            state.activeIsmsTab = 'risks';
+            state.activeIsmsTab = 'controls';
             setPrimaryTab('isms');
             renderIsmsPanel();
             return;
@@ -2421,7 +2673,7 @@
 
         if (action === 'open-inventory') {
             closeDrawer();
-            state.activeIsmsTab = 'assets';
+            state.activeIsmsTab = 'devices';
             setPrimaryTab('isms');
             renderIsmsPanel();
             return;
@@ -2522,6 +2774,20 @@
             minor_findings: 'Minor findings',
             active: 'Active',
             resolved: 'Resolved',
+            reviewed: 'Reviewed',
+            missing: 'Missing',
+            draft: 'Draft',
+            identified: 'Identified',
+            assessed: 'Assessed',
+            treated: 'Treated',
+            accepted: 'Accepted',
+            open: 'Open',
+            in_progress: 'In progress',
+            done: 'Done',
+            verified: 'Verified',
+            not_checked: 'Not checked',
+            effective: 'Effective',
+            ineffective: 'Ineffective',
             major: 'Major',
             minor: 'Minor',
         }[value] || value;
@@ -2541,13 +2807,21 @@
             nominal: 'ready',
             resolved: 'ready',
             verified: 'ready',
+            reviewed: 'ready',
+            ready: 'ready',
+            treated: 'ready',
+            accepted: 'ready',
             passed: 'ready',
+            missing: 'needs_attention',
             closure_risk: 'needs_attention',
             disrupted: 'needs_attention',
             active: 'needs_attention',
             open: 'needs_attention',
             major_findings: 'needs_attention',
             watch: 'partial',
+            draft: 'partial',
+            identified: 'partial',
+            assessed: 'partial',
             available: 'partial',
             in_progress: 'partial',
             done: 'partial',
@@ -2675,6 +2949,11 @@
         }
 
         setPrimaryTab(button.dataset.primaryTab);
+    });
+
+    els.operationsToggle.addEventListener('click', () => {
+        state.operationsExpanded = !state.operationsExpanded;
+        renderOperationsStatus();
     });
 
     els.guidancePanel.addEventListener('click', (event) => {

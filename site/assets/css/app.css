@@ -188,7 +188,16 @@ label {
 .game-shell {
     min-height: 100vh;
     display: grid;
-    grid-template-rows: auto auto 1fr;
+    grid-template-rows: auto 1fr;
+}
+
+.game-chrome {
+    position: sticky;
+    z-index: 50;
+    top: 0;
+    border-bottom: 1px solid rgba(88, 112, 117, 0.24);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 8px 22px rgba(29, 39, 48, 0.08);
 }
 
 .topbar {
@@ -198,7 +207,7 @@ label {
     align-items: center;
     padding: 14px 18px;
     border-bottom: 1px solid var(--line);
-    background: rgba(255, 255, 255, 0.96);
+    background: #fff;
 }
 
 .score-strip {
@@ -283,7 +292,7 @@ label {
     align-items: center;
     padding: 8px 18px;
     border-bottom: 1px solid var(--line);
-    background: rgba(255, 255, 255, 0.96);
+    background: #fbfcfd;
 }
 
 .primary-tabs button {
@@ -656,17 +665,11 @@ label {
     overflow: hidden;
     border: 1px solid var(--line);
     border-radius: 8px;
-    background: #f5f7f8;
+    background: #eef3f8;
 }
 
 .map-view-toolbar {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--line);
-    background: #fff;
+    background: #e1ebf7;
 }
 
 .map-view-toolbar .asset-type {
@@ -703,25 +706,62 @@ label {
 
 .operations-status-panel {
     display: grid;
-    gap: 12px;
-    margin: 16px 16px 0;
-    padding: 14px 16px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--panel);
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: #1f3438;
 }
 
-.operations-status-panel header {
+.operations-toggle {
+    width: 100%;
+    min-height: 48px;
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr auto auto;
     gap: 12px;
     align-items: center;
+    padding: 10px 18px;
+    border: 0;
+    border-radius: 0;
+    background: #1f3438;
+    color: #f5fbfb;
+    text-align: left;
 }
 
-.operations-status-panel h2 {
+.operations-toggle:hover,
+.operations-toggle:focus-visible {
+    background: #28454a;
+    color: #fff;
+}
+
+.operations-toggle::after {
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    content: "";
+    transform: rotate(45deg);
+    transition: transform 0.16s ease;
+}
+
+.operations-toggle[aria-expanded="true"]::after {
+    transform: rotate(-135deg);
+}
+
+.operations-toggle span:first-child {
     margin: 0;
     font-size: 1rem;
+    font-weight: 850;
     letter-spacing: 0;
+}
+
+.operations-details {
+    display: grid;
+    gap: 10px;
+    padding: 12px 18px 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+    background: #1f3438;
 }
 
 .operations-metrics {
@@ -733,15 +773,15 @@ label {
 .operations-metric {
     min-width: 0;
     padding: 10px;
-    border: 1px solid var(--line);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 6px;
-    background: var(--panel-2);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .operations-metric span {
     display: block;
     overflow: hidden;
-    color: var(--muted);
+    color: rgba(245, 251, 251, 0.72);
     font-size: 0.72rem;
     font-weight: 850;
     text-overflow: ellipsis;
@@ -752,6 +792,7 @@ label {
 .operations-metric strong {
     display: block;
     margin-top: 3px;
+    color: #fff;
     font-size: 1rem;
 }
 
@@ -760,22 +801,27 @@ label {
     gap: 8px;
 }
 
+.operations-impacts .empty-state {
+    color: rgba(245, 251, 251, 0.72);
+}
+
 .operations-impact {
     padding: 10px;
-    border: 1px solid rgba(194, 134, 34, 0.35);
+    border: 1px solid rgba(255, 208, 128, 0.36);
     border-radius: 6px;
-    background: rgba(194, 134, 34, 0.08);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .operations-impact strong {
     display: block;
+    color: #fff;
     font-size: 0.92rem;
 }
 
 .operations-impact span {
     display: block;
     margin-top: 2px;
-    color: var(--muted);
+    color: rgba(245, 251, 251, 0.72);
     font-size: 0.82rem;
 }
 
@@ -933,6 +979,14 @@ label {
     border-bottom: 1px solid var(--line);
 }
 
+.isms-panel .panel-heading {
+    background: #eef7ed;
+}
+
+.audit-panel .panel-heading {
+    background: #f8f0e4;
+}
+
 .panel-heading h2 {
     margin: 0;
     font-size: 1rem;
@@ -963,6 +1017,216 @@ label {
     grid-template-columns: repeat(3, minmax(220px, 1fr));
     gap: 12px;
     padding: 14px 16px 16px;
+}
+
+.isms-body.control-groups {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+}
+
+.isms-overview {
+    display: grid;
+    gap: 4px;
+    padding: 12px;
+    border: 1px solid rgba(47, 111, 142, 0.22);
+    border-radius: 8px;
+    background: #f2f7fb;
+}
+
+.isms-overview.wide {
+    grid-column: 1 / -1;
+}
+
+.isms-overview h3 {
+    margin: 0;
+    font-size: 0.98rem;
+}
+
+.isms-overview p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.86rem;
+    line-height: 1.4;
+}
+
+.control-group-card {
+    display: grid;
+    align-content: start;
+    overflow: hidden;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-2);
+}
+
+.control-group-card.expanded {
+    box-shadow: 0 14px 28px rgba(21, 34, 42, 0.08);
+}
+
+.control-group-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 12px;
+    align-items: start;
+    padding: 14px;
+}
+
+.control-group-card:hover .control-group-header,
+.control-group-card.expanded .control-group-header {
+    background: rgba(47, 111, 142, 0.08);
+}
+
+.control-group-toggle {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-items: center;
+    padding: 0;
+    border-color: rgba(47, 111, 142, 0.35);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--accent-dark);
+}
+
+.control-group-toggle:focus-visible {
+    outline: 3px solid rgba(47, 111, 142, 0.28);
+    outline-offset: 2px;
+}
+
+.control-group-summary {
+    min-width: 0;
+}
+
+.control-group-chevron {
+    display: grid;
+    align-items: center;
+    justify-items: center;
+    font-size: 1rem;
+    font-weight: 850;
+    line-height: 1;
+}
+
+.control-group-details {
+    display: grid;
+    gap: 14px;
+    padding: 0 14px 14px;
+    border-top: 1px solid rgba(47, 111, 142, 0.16);
+}
+
+.control-group-card h3,
+.control-group-card h4 {
+    margin: 0;
+}
+
+.control-group-card h3 {
+    font-size: 1rem;
+}
+
+.control-group-card h4 {
+    font-size: 0.86rem;
+    text-transform: uppercase;
+}
+
+.control-group-card p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 0.86rem;
+    line-height: 1.38;
+}
+
+.control-group-focus {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--accent-dark);
+    font-size: 0.72rem;
+    font-weight: 850;
+    text-transform: uppercase;
+}
+
+.control-group-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.control-group-metrics div {
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+}
+
+.control-group-metrics span,
+.annex-control-row small,
+.support-item header div span,
+.support-item.compact span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.74rem;
+}
+
+.control-group-metrics strong {
+    display: block;
+    margin-top: 2px;
+}
+
+.control-support-section {
+    display: grid;
+    gap: 8px;
+}
+
+.annex-control-list,
+.control-action-list {
+    display: grid;
+    gap: 6px;
+}
+
+.annex-control-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    padding: 9px;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--warn);
+    border-radius: 7px;
+    background: #fff;
+}
+
+.annex-control-row.ready {
+    border-left-color: var(--good);
+}
+
+.annex-control-row strong,
+.support-item strong {
+    display: block;
+    font-size: 0.9rem;
+}
+
+.annex-control-row > span {
+    font-weight: 850;
+}
+
+.support-item {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #fff;
+}
+
+.support-item.compact {
+    gap: 3px;
+}
+
+.support-item header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
 }
 
 .artifact-card {

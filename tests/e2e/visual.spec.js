@@ -25,13 +25,18 @@ test('authenticated office simulation renders and main workflow works', async ({
   const helpDialog = page.locator('#context-modal');
   await expect(helpDialog).toBeVisible();
   await expect(helpDialog.getByRole('heading', { name: 'Game Guide' })).toBeVisible();
-  await expect(helpDialog).toContainText('Purpose and core idea');
-  await helpDialog.getByRole('tab', { name: 'Layers' }).click();
-  await expect(helpDialog).toContainText('The six layers');
+  await expect(helpDialog).toContainText('What counts as progress');
+  await expect(helpDialog).toContainText('maintain Office Performance');
+  await helpDialog.getByRole('tab', { name: 'How it works' }).click();
+  await expect(helpDialog).toContainText('How the game works');
+  await expect(helpDialog).toContainText('Controls accordions group selected Annex A-inspired themes');
   await helpDialog.getByRole('tab', { name: 'Example' }).click();
   await expect(helpDialog).toContainText('End-to-end example');
-  await helpDialog.getByRole('tab', { name: 'Components' }).click();
-  await expect(helpDialog).toContainText('Top KPIs');
+  await expect(helpDialog).toContainText('expand the matching focus group');
+  await helpDialog.getByRole('tab', { name: 'Views' }).click();
+  await expect(helpDialog).toContainText('Views and controls');
+  await expect(helpDialog).toContainText('The persistent accordion below the navigation');
+  await expect(helpDialog).toContainText('Each collapsed group summarizes an office IT control theme');
   await helpDialog.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(helpDialog).toBeHidden();
   await page.getByRole('button', { name: 'Timeline' }).click();
@@ -77,8 +82,14 @@ test('authenticated office simulation renders and main workflow works', async ({
   await page.keyboard.press('Escape');
   await expect(drawer).toBeHidden();
   await expect(page.locator('#office-canvas')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'ISMS Workbench' })).toBeHidden();
-  await expect(page.getByRole('heading', { name: /Nominal|Watch|Disrupted|Closure risk/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Office IT Controls' })).toBeHidden();
+  await expect(page.getByText('Office Map', { exact: true })).toBeVisible();
+  await expect(page.locator('#operations-toggle')).toBeVisible();
+  await expect(page.locator('#operations-toggle')).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#operations-status-badge')).toContainText(/Nominal|Watch|Disrupted|Closure risk/);
+  await expect(page.locator('#operations-metrics')).toBeHidden();
+  await page.locator('#operations-toggle').click();
+  await expect(page.locator('#operations-toggle')).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('#operations-metrics')).toContainText('Clinical capacity');
   await expect(page.locator('#operations-metrics')).toContainText('EHR availability');
   await expect(page.getByText('Office Operations', { exact: true })).toBeVisible();
@@ -190,13 +201,34 @@ test('authenticated office simulation renders and main workflow works', async ({
 
   await page.getByRole('tab', { name: 'ISMS' }).click();
   await expect(page.getByRole('tab', { name: 'ISMS' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('heading', { name: 'ISMS Workbench' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Actions', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Risks', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Unauthorized access to Cloud EHR' })).toBeVisible();
-
-  await page.getByRole('button', { name: 'Evidence', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Backup restore test result' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Office IT Controls' })).toBeVisible();
+  await expect(page.getByText('Office Operations', { exact: true })).toBeVisible();
+  await expect(page.locator('#operations-metrics')).toContainText('Clinical capacity');
+  await expect(page.getByRole('button', { name: 'Follow-up', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Controls', exact: true })).toHaveClass(/active/);
+  await expect(page.getByText('Selected Annex A practice')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Access and identity' })).toBeVisible();
+  const accessControlGroup = page.locator('.control-group-card').filter({ hasText: 'Access and identity' });
+  const accessToggle = accessControlGroup.locator('[data-control-group-toggle="access"]');
+  await expect(accessToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(accessControlGroup).toContainText('Annex A-inspired focus');
+  await expect(accessControlGroup).toContainText('Keep EHR and admin access trustworthy');
+  await expect(accessControlGroup.locator('.control-group-header > .status-badge')).toBeVisible();
+  await expect(accessControlGroup.locator('.control-group-header .control-group-chevron')).toContainText('+');
+  await expect(page.locator('#control-group-details-access')).toBeHidden();
+  await accessToggle.click();
+  await expect(accessToggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(accessControlGroup.locator('.control-group-header .control-group-chevron')).toContainText('-');
+  await expect(page.locator('#control-group-details-access')).toBeVisible();
+  await expect(page.getByText('Unauthorized access to Cloud EHR')).toBeVisible();
+  const backupControlGroup = page.locator('.control-group-card').filter({ hasText: 'Backup and recovery' });
+  const backupToggle = backupControlGroup.locator('[data-control-group-toggle="backup"]');
+  await expect(backupToggle).toHaveAttribute('aria-expanded', 'false');
+  await backupToggle.click();
+  await expect(page.getByText('Backup restore test result')).toBeVisible();
+  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Device register' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cloud EHR' })).toBeVisible();
 
   await page.getByRole('tab', { name: 'Office' }).click();
   await page.getByRole('button', { name: 'Timeline' }).click();
@@ -218,11 +250,10 @@ test('authenticated office simulation renders and main workflow works', async ({
   await expect(eventDialog).toBeVisible();
   await expect(eventDialog.getByRole('heading', { name: 'Phishing attempt against EHR access' })).toBeVisible();
   await expect(eventDialog).toContainText('Required controls');
-  await expect(page.getByRole('heading', { name: 'Corrective Actions' })).toHaveCount(0);
-  await expect(eventDialog.getByRole('button', { name: 'Open action' })).toBeVisible();
-  await eventDialog.getByRole('button', { name: 'Open action' }).click();
+  await expect(eventDialog.getByRole('button', { name: 'Open follow-up' })).toBeVisible();
+  await eventDialog.getByRole('button', { name: 'Open follow-up' }).click();
   await expect(page.getByRole('tab', { name: 'ISMS' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('button', { name: 'Actions', exact: true })).toHaveClass(/active/);
+  await expect(page.getByRole('button', { name: 'Follow-up', exact: true })).toHaveClass(/active/);
   await expect(page.getByRole('heading', { name: /Close phishing event gaps|Prove containment|Make backup recovery/ })).toBeVisible();
   await page.getByRole('tab', { name: 'Office' }).click();
   await expect(page.locator('#operations-impacts')).toContainText('Current mitigation');
@@ -249,9 +280,12 @@ test('authenticated office simulation renders and main workflow works', async ({
   });
   expect(eventMarkerPixels).toBeGreaterThan(20);
 
+  const affectedBox = await canvas.boundingBox();
+  const affectedMapUnit = (affectedBox.width - mapPadding * 2) / 28;
+  const affectedMapOffsetY = Math.max(mapPadding, (affectedBox.height - affectedMapUnit * 18) / 2);
   await page.mouse.click(
-    box.x + mapOffsetX + 24 * mapUnit,
-    box.y + mapOffsetY + 3.5 * mapUnit,
+    affectedBox.x + mapOffsetX + 24 * affectedMapUnit,
+    affectedBox.y + affectedMapOffsetY + 3.5 * affectedMapUnit,
   );
   const affectedAssetDialog = page.getByRole('dialog');
   await expect(affectedAssetDialog).toBeVisible();
@@ -264,8 +298,9 @@ test('authenticated office simulation renders and main workflow works', async ({
 
   await page.getByRole('tab', { name: 'Audit' }).click();
   await expect(page.getByRole('heading', { name: 'Audit', exact: true })).toBeVisible();
-  await expect(page.locator('#certification-stepper')).toContainText('Evidence pack');
-  await expect(page.locator('#certification-stepper')).toContainText('Risk treatment');
+  await expect(page.getByText('Office Operations', { exact: true })).toBeVisible();
+  await expect(page.locator('#certification-stepper')).toContainText('Control evidence');
+  await expect(page.locator('#certification-stepper')).toContainText('Risk decisions');
   await expect(page.locator('#certification-stepper')).toContainText('Readiness gate');
   await expect(page.locator('#certification-stepper')).toContainText('Certification check');
   await page.getByRole('button', { name: 'Run audit' }).click();

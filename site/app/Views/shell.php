@@ -56,67 +56,68 @@
     </main>
 
     <main id="game-view" class="game-shell" hidden>
-        <header class="topbar">
-            <div>
-                <p class="eyebrow">ISMS Office</p>
-                <h1 id="organization-name">Physician Practice</h1>
-            </div>
-            <div class="score-strip" aria-label="Office performance and readiness scores">
-                <div class="score-pill">
-                    <span>Office</span>
-                    <strong id="score-office">100%</strong>
+        <div class="game-chrome">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">ISMS Office</p>
+                    <h1 id="organization-name">Physician Practice</h1>
                 </div>
-                <div class="score-pill">
-                    <span>Readiness</span>
-                    <strong id="score-overall">0%</strong>
+                <div class="score-strip" aria-label="Office performance and readiness scores">
+                    <div class="score-pill">
+                        <span>Office</span>
+                        <strong id="score-office">100%</strong>
+                    </div>
+                    <div class="score-pill">
+                        <span>Readiness</span>
+                        <strong id="score-overall">0%</strong>
+                    </div>
+                    <div class="score-pill">
+                        <span>Security</span>
+                        <strong id="score-security">0%</strong>
+                    </div>
+                    <div class="score-pill">
+                        <span>Resilience</span>
+                        <strong id="score-resilience">0%</strong>
+                    </div>
+                    <div class="score-pill">
+                        <span>Audit</span>
+                        <strong id="score-audit">0%</strong>
+                    </div>
                 </div>
-                <div class="score-pill">
-                    <span>Security</span>
-                    <strong id="score-security">0%</strong>
+                <div class="topbar-actions">
+                    <button id="help-toggle" class="icon-button" type="button" aria-label="Help and game guide">?</button>
+                    <button id="drawer-toggle" type="button" aria-haspopup="dialog" aria-controls="info-drawer" aria-expanded="false">
+                        <span>Timeline</span>
+                        <span id="drawer-badge" class="drawer-badge" hidden>0</span>
+                    </button>
+                    <button id="logout" type="button">Sign out</button>
                 </div>
-                <div class="score-pill">
-                    <span>Resilience</span>
-                    <strong id="score-resilience">0%</strong>
-                </div>
-                <div class="score-pill">
-                    <span>Audit</span>
-                    <strong id="score-audit">0%</strong>
-                </div>
-            </div>
-            <div class="topbar-actions">
-                <button id="help-toggle" class="icon-button" type="button" aria-label="Help and game guide">?</button>
-                <button id="drawer-toggle" type="button" aria-haspopup="dialog" aria-controls="info-drawer" aria-expanded="false">
-                    <span>Timeline</span>
-                    <span id="drawer-badge" class="drawer-badge" hidden>0</span>
-                </button>
-                <button id="logout" type="button">Sign out</button>
-            </div>
-        </header>
+            </header>
 
-        <nav id="primary-tabs" class="primary-tabs" role="tablist" aria-label="Main game views">
-            <button id="tab-office" class="active" type="button" role="tab" aria-selected="true" aria-controls="panel-office" data-primary-tab="office">Office</button>
-            <button id="tab-isms" type="button" role="tab" aria-selected="false" aria-controls="panel-isms" data-primary-tab="isms">ISMS</button>
-            <button id="tab-audit" type="button" role="tab" aria-selected="false" aria-controls="panel-audit" data-primary-tab="audit">Audit</button>
-        </nav>
+            <nav id="primary-tabs" class="primary-tabs" role="tablist" aria-label="Main game views">
+                <button id="tab-office" class="active" type="button" role="tab" aria-selected="true" aria-controls="panel-office" data-primary-tab="office">Office</button>
+                <button id="tab-isms" type="button" role="tab" aria-selected="false" aria-controls="panel-isms" data-primary-tab="isms">ISMS</button>
+                <button id="tab-audit" type="button" role="tab" aria-selected="false" aria-controls="panel-audit" data-primary-tab="audit">Audit</button>
+            </nav>
+
+            <section id="operations-status-panel" class="operations-status-panel" aria-label="Office operations status">
+                <button id="operations-toggle" class="operations-toggle" type="button" aria-expanded="false" aria-controls="operations-details">
+                    <span id="operations-status-title">Office Operations</span>
+                    <span id="operations-status-badge" class="status-badge ready">Nominal</span>
+                </button>
+                <div id="operations-details" class="operations-details" hidden>
+                    <div id="operations-metrics" class="operations-metrics"></div>
+                    <div id="operations-impacts" class="operations-impacts"></div>
+                </div>
+            </section>
+        </div>
 
         <section id="panel-office" class="tab-panel active" role="tabpanel" aria-labelledby="tab-office" data-tab-panel="office">
-            <section class="operations-status-panel" aria-label="Office operations status">
-                <header>
-                    <div>
-                        <p class="eyebrow">Office Operations</p>
-                        <h2 id="operations-status-title">Operational Status</h2>
-                    </div>
-                    <span id="operations-status-badge" class="status-badge ready">Nominal</span>
-                </header>
-                <div id="operations-metrics" class="operations-metrics"></div>
-                <div id="operations-impacts" class="operations-impacts"></div>
-            </section>
-
             <section class="workspace">
                 <section class="scene-panel" aria-label="Office floor plan">
-                    <div class="map-view-toolbar">
+                    <header class="panel-heading map-view-toolbar">
                         <div>
-                            <p class="eyebrow">View mode</p>
+                            <h2>Office Map</h2>
                             <p id="map-mode-description" class="asset-type">Normal office map.</p>
                         </div>
                         <div id="map-view-controls" class="map-view-controls" role="toolbar" aria-label="Floor plan view modes">
@@ -126,7 +127,7 @@
                             <button type="button" data-map-mode="risk" aria-pressed="false">Risk</button>
                             <button type="button" data-map-mode="audit" aria-pressed="false">Audit</button>
                         </div>
-                    </div>
+                    </header>
                     <canvas id="office-canvas" width="1120" height="720"></canvas>
                 </section>
 
@@ -134,17 +135,16 @@
         </section>
 
         <section id="panel-isms" class="tab-panel" role="tabpanel" aria-labelledby="tab-isms" data-tab-panel="isms" hidden>
-        <section class="isms-panel" aria-label="ISMS artifacts">
+        <section class="isms-panel" aria-label="Office IT controls">
             <header class="panel-heading">
                 <div>
-                    <h2>ISMS Workbench</h2>
+                    <h2>Office IT Controls</h2>
                     <p id="isms-score-summary" class="asset-type"></p>
                 </div>
-                <div id="isms-tabs" class="isms-tabs" role="tablist" aria-label="ISMS artifact views">
-                    <button type="button" data-isms-tab="assets">Inventory</button>
-                    <button type="button" data-isms-tab="risks">Risks</button>
-                    <button type="button" data-isms-tab="evidence">Evidence</button>
-                    <button type="button" data-isms-tab="actions">Actions</button>
+                <div id="isms-tabs" class="isms-tabs" role="tablist" aria-label="Office IT control views">
+                    <button type="button" data-isms-tab="controls">Controls</button>
+                    <button type="button" data-isms-tab="devices">Devices</button>
+                    <button type="button" data-isms-tab="followup">Follow-up</button>
                 </div>
             </header>
             <div id="isms-body" class="isms-body"></div>

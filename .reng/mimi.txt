@@ -1,0 +1,3 @@
+Configurations for devices must be chosen from a catalog of all configs (e.g. MFA, Ecryption, ..)
+Then, they must be bought wchich requires a budget
+Money comes in according to office operations: better, more money, office down, less money
