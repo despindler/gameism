@@ -58,9 +58,9 @@
     <main id="game-view" class="game-shell" hidden>
         <div class="game-chrome">
             <header class="topbar">
-                <div>
-                    <p class="eyebrow">ISMS Office</p>
-                    <h1 id="organization-name">Physician Practice</h1>
+                <div class="topbar-brand">
+                    <img class="site-logo" src="assets/img/cyrenzh_logo_b_square-small.png" alt="Cyrenzh">
+                    <h1 id="organization-name">The Office</h1>
                 </div>
                 <div class="score-strip" aria-label="Office performance and readiness scores">
                     <div class="score-pill">

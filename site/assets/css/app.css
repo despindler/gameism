@@ -210,6 +210,24 @@ label {
     background: #fff;
 }
 
+.topbar-brand {
+    min-width: 0;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.topbar-brand h1 {
+    min-width: 0;
+}
+
+.site-logo {
+    width: 140px;
+    height: 56px;
+    flex: 0 0 auto;
+    object-fit: contain;
+}
+
 .score-strip {
     display: grid;
     grid-template-columns: repeat(5, minmax(96px, 1fr));

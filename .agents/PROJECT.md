@@ -1030,3 +1030,53 @@ Known issues and decisions:
 Next steps:
 
 - Playtest whether first-time players still need a tiny in-view hint on where to start after opening the game.
+
+## UI Phase 14 - Help TODOs Tab
+
+Date: 2026-06-29
+
+Goal: Capture near-term product improvement ideas inside the in-app Help guide without expanding the main UI.
+
+What changed:
+
+- Added a final `TODOs` tab to the Help modal.
+- Condensed improvement ideas into concise English entries for control catalogs, budgeted purchasing with operations-linked budget growth, first-time orientation text, backup realism, realistic implementation requirements, and German localization.
+- Updated Playwright visual coverage and README Help wording for the new tab.
+
+How to verify:
+
+- `node --check site/assets/js/app.js`
+- `npm run test:visual`
+- `git diff --check`
+
+Known issues and decisions:
+
+- The TODOs tab is static guide content only; it does not implement the listed features.
+
+Next steps:
+
+- Choose one TODO item as a concrete implementation milestone when product direction is clear.
+
+## UI Phase 15 - Header Logo Refinement
+
+Date: 2026-06-29
+
+Goal: Make more room for the Cyrenzh logo in the top navigation.
+
+What changed:
+
+- Cropped transparent whitespace from the Cyrenzh logo PNG and copied the cropped asset into deployable site assets.
+- Enlarged the topbar logo display.
+- Removed the small `ISMS OFFICE` eyebrow above the game header.
+- Changed the visible game header to `The Office`.
+- Updated Playwright visual coverage to verify the cropped logo dimensions and new header text.
+
+How to verify:
+
+- `node --check site/assets/js/app.js`
+- `npm run test:visual`
+- `git diff --check`
+
+Known issues and decisions:
+
+- The underlying scenario organization name remains available in game state, but the topbar now uses the product-facing `The Office` label.

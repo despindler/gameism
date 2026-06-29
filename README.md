@@ -28,7 +28,7 @@ When updating an existing deployment, run the latest `database/schema.sql` and `
 After login, the player configures a small physician office from the floor plan and an ISMS view focused on selected office IT controls:
 
 - The main application is organized into `Office`, `ISMS`, and `Audit` tabs.
-- A topbar Help button opens a tabbed game guide covering the game goal, current operating flow, an end-to-end example, and view reference.
+- A topbar Help button opens a tabbed game guide covering the game goal, current operating flow, an end-to-end example, view reference, and improvement TODOs.
 - A right-side drawer shows the full event Timeline, an Advisor tab with state-driven guidance hints, and a Settings tab for difficulty and timeline pacing controls.
 - An audit-prep stepper shows where the player is in the review workflow.
 - The Office tab shows a schematic physician-office floor plan with rooms, an aisle, doors, furniture, and type-specific device drawings.

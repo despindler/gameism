@@ -16,7 +16,11 @@ test('authenticated office simulation renders and main workflow works', async ({
   await page.locator('#login-form button[type="submit"]').click();
 
   await expect(page.locator('#game-view')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Northbridge Family Practice' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'The Office' })).toBeVisible();
+  const siteLogo = page.getByRole('img', { name: 'Cyrenzh' });
+  await expect(siteLogo).toBeVisible();
+  await expect(siteLogo).toHaveJSProperty('naturalWidth', 300);
+  await expect(siteLogo).toHaveJSProperty('naturalHeight', 120);
   await expect(page.getByRole('tab', { name: 'Office' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tab', { name: 'ISMS' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Audit' })).toBeVisible();
@@ -37,6 +41,10 @@ test('authenticated office simulation renders and main workflow works', async ({
   await expect(helpDialog).toContainText('Views and controls');
   await expect(helpDialog).toContainText('The persistent accordion below the navigation');
   await expect(helpDialog).toContainText('Each collapsed group summarizes an office IT control theme');
+  await helpDialog.getByRole('tab', { name: 'TODOs' }).click();
+  await expect(helpDialog).toContainText('Application improvement TODOs');
+  await expect(helpDialog).toContainText('Require players to buy controls before applying them');
+  await expect(helpDialog).toContainText('Add a German language option');
   await helpDialog.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(helpDialog).toBeHidden();
   await page.getByRole('button', { name: 'Timeline' }).click();

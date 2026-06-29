@@ -340,7 +340,7 @@
     function renderHud() {
         const game = state.game;
         const categories = game.score.categories;
-        els.organizationName.textContent = game.organization.organization_name;
+        els.organizationName.textContent = 'The Office';
         els.scoreOffice.textContent = `${officePerformancePercent(game.operations)}%`;
         els.scoreOverall.textContent = `${game.score.overall.percent}%`;
         els.scoreSecurity.textContent = `${categories.security.percent}%`;
@@ -1545,6 +1545,7 @@
             ['flow', 'How it works'],
             ['example', 'Example'],
             ['views', 'Views'],
+            ['todos', 'TODOs'],
         ];
         const activeTab = tabs.some(([key]) => key === state.activeHelpTab) ? state.activeHelpTab : 'game';
         state.activeHelpTab = activeTab;
@@ -1619,6 +1620,22 @@
                         <article><h4>Follow-up</h4><p>Tracks event response work. Follow-up must be completed and verified as effective before related events can be resolved.</p></article>
                         <article><h4>Audit prep</h4><p>Shows the review gate: control evidence, risk decisions, readiness, and certification check.</p></article>
                         <article><h4>Audit</h4><p>Runs a simulated audit report. Use it as feedback, not as the only goal: audit findings tell you how to improve office resilience.</p></article>
+                    </div>
+                </section>
+            `;
+        }
+
+        if (tab === 'todos') {
+            return `
+                <section class="help-section">
+                    <h3>Application improvement TODOs</h3>
+                    <div class="help-grid">
+                        <article><h4>Control catalog</h4><p>Move device configuration into a shared catalog of available controls, such as MFA, encryption, patching, backup, and monitoring. As a result, users need to come up with the appropriate configuration when preparing for certain types of events.</p></article>
+                        <article><h4>Purchasing and budget</h4><p>Require players to buy controls before applying them, so configuration choices compete for a limited office budget. Make budget growth depend on Office Operations: stable operations generate more budget, while downtime and degraded service slow it down.</p></article>
+                        <article><h4>Immediate orientation</h4><p>Add a concise in-view explanation so first-time players understand the simulation without opening Help first.</p></article>
+                        <article><h4>Backup realism</h4><p>Model the 3-2-1 backup rule, longer retention, offsite copies, and automated scanning for malware or compromise before restore.</p></article>
+                        <article><h4>Implementation requirement</h4><p>Setting up a configuration is not reduced to tick a checkbox. Instead, the set-up can mirror realistic work practices such as having a terminal on a device and issuing commands.</p></article>
+                        <article><h4>German localization</h4><p>Add a German language option for players who are more comfortable learning security and office operations in German.</p></article>
                     </div>
                 </section>
             `;
